@@ -1,29 +1,11 @@
-import { auth } from "@/lib/auth";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+// Middleware usa authConfig leve (Edge-compatible) — sem PrismaAdapter/jose node APIs
+import NextAuth from "next-auth";
+import { authConfig } from "./auth.config";
 
-const PUBLIC_PATHS = ["/login", "/api/auth", "/api/webhooks"];
-
-export default auth((req) => {
-  const { pathname } = req.nextUrl;
-
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
-  const isAuthenticated = !!req.auth?.user;
-
-  if (!isPublic && !isAuthenticated) {
-    const loginUrl = new URL("/login", req.url);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  if (pathname === "/login" && isAuthenticated) {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  return NextResponse.next();
-});
+export const { auth: middleware } = NextAuth(authConfig);
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
