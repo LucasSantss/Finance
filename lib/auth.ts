@@ -2,7 +2,6 @@ import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Google from "next-auth/providers/google";
 import GitHub from "next-auth/providers/github";
-import Resend from "next-auth/providers/resend";
 import { prisma } from "@/lib/prisma";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -16,11 +15,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientId: process.env.GITHUB_ID!,
       clientSecret: process.env.GITHUB_SECRET!,
     }),
-    // Magic link por email (opcional — requer Resend ou SendGrid)
-    // Resend({
-    //   apiKey: process.env.RESEND_API_KEY,
-    //   from: "noreply@seudominio.com",
-    // }),
   ],
   session: {
     strategy: "database",
@@ -37,6 +31,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
     error: "/login",
   },
+  // Necessário para o middleware funcionar no Edge Runtime
+  trustHost: true,
 });
 
 // Extend NextAuth types

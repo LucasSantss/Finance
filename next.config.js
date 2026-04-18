@@ -1,10 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverActions: {
-      allowedOrigins: ["localhost:3000"],
-    },
-  },
+  // No Next.js 15, serverActions é estável — sem wrapper "experimental"
+  serverExternalPackages: ["@prisma/client", "prisma"],
 };
 
 module.exports = nextConfig;
