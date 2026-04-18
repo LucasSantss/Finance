@@ -3,24 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { z } from "zod";
+import { transactionInputSchema, type TransactionInput } from "@/lib/schemas";
 
-// ─── Schemas ───────────────────────────────────────────────────────────────
-
-export const transactionInputSchema = z.object({
-  description: z.string().trim().min(1, "Informe uma descrição").max(120),
-  amount: z
-    .number({ invalid_type_error: "Valor inválido" })
-    .positive("O valor deve ser maior que zero")
-    .max(99_999_999, "Valor muito alto"),
-  type: z.enum(["INCOME", "EXPENSE"]),
-  category: z.string().trim().min(1, "Selecione uma categoria").max(60),
-  date: z.string().min(1),
-});
-
-export type TransactionInput = z.infer<typeof transactionInputSchema>;
-
-// ─── Result type (evita throws em Server Actions) ──────────────────────────
+// ─── Result type ───────────────────────────────────────────────────────────
 
 type ActionResult<T = void> =
   | { ok: true; data: T }
@@ -55,7 +40,6 @@ export async function createTransaction(
       select: { id: true },
     });
 
-    // Garante consistência em todas as rotas que exibem transações
     revalidatePath("/");
     revalidatePath("/dashboard");
     revalidatePath("/transactions");
@@ -77,7 +61,6 @@ export async function deleteTransaction(
   if (!session?.user?.id) return { ok: false, error: "Não autenticado" };
 
   try {
-    // Confirma que a transação pertence ao usuário logado
     const transaction = await prisma.transaction.findFirst({
       where: { id, userId: session.user.id },
       select: { id: true },

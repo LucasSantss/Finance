@@ -3,7 +3,8 @@
 import { useState, useTransition, useOptimistic } from "react";
 import { Plus, Loader2, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { toast } from "sonner";
-import { createTransaction, type TransactionInput } from "@/lib/actions";
+import { createTransaction } from "@/lib/actions";
+import { type TransactionInput } from "@/lib/schemas";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, cn, todayISO } from "@/lib/utils";
 
 export function TransactionForm() {
