@@ -10,7 +10,7 @@ export const authConfig: NextAuthConfig = {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const PUBLIC_PATHS = ["/login", "/api/auth", "/api/webhooks"];
+      const PUBLIC_PATHS = ["/login", "/api/auth", "/api/webhooks", "/api/shortcuts"];
       const isPublic = PUBLIC_PATHS.some((p) =>
         nextUrl.pathname.startsWith(p)
       );
