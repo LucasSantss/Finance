@@ -16,6 +16,7 @@ import { TransactionForm } from "@/components/transaction-form";
 import { FixedSalaryForm } from "@/components/fixed-salary-form";
 import { RecurringExpenseForm } from "@/components/recurring-expense-form";
 import { VaultCard, VaultCreateButton } from "@/components/vault-card";
+import { NotificationParser } from "@/components/notification-parser";
 import { Wallet, ArrowDownCircle, ArrowUpCircle, TrendingUp } from "lucide-react";
 
 export const metadata = { title: "Visão Geral" };
@@ -121,6 +122,9 @@ export default async function DashboardPage() {
           </div>
         </section>
       )}
+
+      {/* Parser de notificação */}
+      <NotificationParser />
 
       {/* Automações */}
       <section className="grid gap-6 lg:grid-cols-2">
