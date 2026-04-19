@@ -1,24 +1,42 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getTransactions, getTransactionStats } from "@/lib/actions";
+import {
+  getTransactions,
+  getTransactionStats,
+  getFixedSalary,
+  getRecurringExpenses,
+  getVaults,
+  processFixedSalaryForCurrentMonth,
+  processRecurringExpensesForCurrentMonth,
+} from "@/lib/actions";
 import { StatCard } from "@/components/stat-card";
 import { MonthlyChart } from "@/components/monthly-chart";
 import { TransactionList } from "@/components/transaction-list";
 import { TransactionForm } from "@/components/transaction-form";
+import { FixedSalaryForm } from "@/components/fixed-salary-form";
+import { RecurringExpenseForm } from "@/components/recurring-expense-form";
+import { VaultCard, VaultCreateButton } from "@/components/vault-card";
 import { Wallet, ArrowDownCircle, ArrowUpCircle, TrendingUp } from "lucide-react";
 
 export const metadata = { title: "Visão Geral" };
-
-// Garante dados sempre frescos no SSR
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const [transactions, stats] = await Promise.all([
+  // Processa automáticos do mês
+  await Promise.all([
+    processFixedSalaryForCurrentMonth(),
+    processRecurringExpensesForCurrentMonth(),
+  ]);
+
+  const [transactions, stats, salary, recurringExpenses, vaults] = await Promise.all([
     getTransactions(),
     getTransactionStats(),
+    getFixedSalary(),
+    getRecurringExpenses(),
+    getVaults(),
   ]);
 
   return (
@@ -65,33 +83,56 @@ export default async function DashboardPage() {
       {/* Chart + Form */}
       <section className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 rounded-xl border border-border bg-card p-5 shadow-soft">
-          <div className="mb-4 flex items-end justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">
-                Receitas e despesas
-              </h2>
-              <p className="text-xs text-muted-foreground">Últimos 6 meses</p>
-            </div>
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-foreground">Receitas e despesas</h2>
+            <p className="text-xs text-muted-foreground">Últimos 6 meses</p>
           </div>
           <MonthlyChart transactions={transactions} />
         </div>
-
         <div>
           <TransactionForm />
         </div>
       </section>
 
-      {/* Recent transactions */}
-      <section className="space-y-3">
-        <div className="flex items-end justify-between">
+      {/* Cofres */}
+      {vaults.length > 0 && (
+        <section className="space-y-3">
           <div>
-            <h2 className="text-sm font-semibold text-foreground">
-              Movimentações recentes
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              Atualização em tempo real via Server Actions
-            </p>
+            <h2 className="text-sm font-semibold text-foreground">Cofres</h2>
+            <p className="text-xs text-muted-foreground">Progresso das suas metas de poupança</p>
           </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {vaults.map((vault) => (
+              <VaultCard key={vault.id} vault={vault} />
+            ))}
+            <VaultCreateButton />
+          </div>
+        </section>
+      )}
+
+      {vaults.length === 0 && (
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Cofres</h2>
+            <p className="text-xs text-muted-foreground">Metas de poupança com prazo definido</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <VaultCreateButton />
+          </div>
+        </section>
+      )}
+
+      {/* Automações */}
+      <section className="grid gap-6 lg:grid-cols-2">
+        <FixedSalaryForm salary={salary} />
+        <RecurringExpenseForm expenses={recurringExpenses} />
+      </section>
+
+      {/* Movimentações recentes */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Movimentações recentes</h2>
+          <p className="text-xs text-muted-foreground">Atualização em tempo real via Server Actions</p>
         </div>
         <TransactionList transactions={transactions} limit={8} />
       </section>
