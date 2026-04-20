@@ -11,6 +11,9 @@ export async function POST(req: NextRequest) {
     const { text } = await req.json();
     if (!text?.trim()) return NextResponse.json({ error: "Texto vazio" }, { status: 400 });
 
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return NextResponse.json({ error: "IA não configurada" }, { status: 500 });
+
     const today = new Date().toISOString().slice(0, 10);
 
     const prompt = `Você é um parser de notificações bancárias brasileiras. Analise a notificação abaixo e extraia os dados da transação.
@@ -39,18 +42,20 @@ Regras:
 - Converta vírgula para ponto no amount (ex: 45,90 → 45.90)`;
 
     try {
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                model: "claude-sonnet-4-20250514",
-                max_tokens: 300,
-                messages: [{ role: "user", content: prompt }],
-            }),
-        });
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { maxOutputTokens: 300, temperature: 0.1 },
+                }),
+            }
+        );
 
         const data = await response.json();
-        const raw = data.content?.[0]?.text ?? "";
+        const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
         let parsed;
         try {

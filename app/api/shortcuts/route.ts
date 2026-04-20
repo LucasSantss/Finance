@@ -19,28 +19,24 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
-    // 1. Autenticação via WEBHOOK_SECRET (mesmo usado no webhook existente)
     const secret = process.env.WEBHOOK_SECRET;
     if (!secret) return json({ error: "Servidor não configurado" }, 500);
     if (req.headers.get("x-webhook-secret") !== secret)
         return json({ error: "Não autorizado" }, 401);
 
-    // 2. Body: { userId, text } — text é o conteúdo da notificação
     let body: { userId?: string; text?: string };
-    try {
-        body = await req.json();
-    } catch {
-        return json({ error: "JSON inválido" }, 400);
-    }
+    try { body = await req.json(); }
+    catch { return json({ error: "JSON inválido" }, 400); }
 
     const { userId, text } = body;
     if (!userId || !text?.trim()) return json({ error: "userId e text são obrigatórios" }, 400);
 
-    // 3. Verifica usuário
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
     if (!user) return json({ error: "Usuário não encontrado" }, 404);
 
-    // 4. Chama IA para parsear a notificação
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return json({ error: "IA não configurada" }, 500);
+
     const today = new Date().toISOString().slice(0, 10);
     const prompt = `Você é um parser de notificações bancárias brasileiras. Analise a notificação abaixo e extraia os dados da transação.
 
@@ -68,18 +64,19 @@ Regras:
     let parsed: { description: string; amount: number; type: "INCOME" | "EXPENSE"; category: string; date: string; error?: string };
 
     try {
-        const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                model: "claude-sonnet-4-20250514",
-                max_tokens: 200,
-                messages: [{ role: "user", content: prompt }],
-            }),
-        });
-
+        const aiRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { maxOutputTokens: 200, temperature: 0.1 },
+                }),
+            }
+        );
         const aiData = await aiRes.json();
-        const raw = aiData.content?.[0]?.text ?? "";
+        const raw = aiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
         parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
     } catch {
         return json({ error: "Falha ao interpretar notificação" }, 422);
@@ -87,7 +84,6 @@ Regras:
 
     if (parsed.error) return json({ error: parsed.error }, 422);
 
-    // 5. Grava a transação
     try {
         const transaction = await prisma.transaction.create({
             data: {
@@ -104,7 +100,7 @@ Regras:
 
         return json({
             ok: true,
-            message: `✅ ${parsed.type === "EXPENSE" ? "Despesa" : "Receita"} de R$ ${parsed.amount.toFixed(2)} registrada — ${parsed.description}`,
+            message: `✅ ${parsed.type === "EXPENSE" ? "Despesa" : "Receita"} de R$ ${Number(parsed.amount).toFixed(2)} registrada — ${parsed.description}`,
             transaction,
         }, 201);
     } catch (err) {
