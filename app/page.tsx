@@ -89,20 +89,6 @@ export default async function DashboardPage() {
       </section>
 
       {/* Divisor */}
-      <div className="border-t border-border" />
-
-      {/* Dashboard por mês — histórico e previsão */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">Histórico e previsão</h2>
-          <p className="text-xs text-muted-foreground">Navegue por meses anteriores ou veja a previsão dos próximos</p>
-        </div>
-        <MonthDashboard
-          initialData={monthData}
-          initialYear={currentYear}
-          initialMonth={currentMonth}
-        />
-      </section>
 
       {/* Notificação */}
       <NotificationParser />
