@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useCallback } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays, ArrowUpCircle, ArrowDownCircle, Wallet, Eye, Receipt, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, ArrowUpCircle, ArrowDownCircle, Wallet, Eye, Receipt, Loader2, PiggyBank } from "lucide-react";
 import { getMonthData } from "@/lib/actions";
 import { StatCard } from "@/components/stat-card";
 import { TransactionList } from "@/components/transaction-list";
@@ -158,7 +158,38 @@ export function MonthDashboard({ initialData, initialYear, initialMonth }: Month
               </div>
             )}
 
-            {data.transactions.length === 0 && data.recurringPreview.length === 0 && (
+            {("vaultPreview" in data) && data.vaultPreview.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <PiggyBank className="h-4 w-4 text-violet-500" />
+                  <h2 className="text-sm font-semibold text-foreground">Cofres previstos</h2>
+                  <span className="text-xs text-muted-foreground">— reservas mensais programadas</span>
+                </div>
+                <div className="rounded-xl border border-border bg-card overflow-hidden shadow-soft">
+                  {data.vaultPreview.map((item, i) => (
+                    <div key={item.id} className={cn(
+                      "flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-accent/40",
+                      i > 0 && "border-t border-border"
+                    )}>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-500/10 text-violet-500 text-xs font-semibold shrink-0">
+                          <PiggyBank className="h-3.5 w-3.5" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{item.description}</p>
+                          <p className="text-xs text-muted-foreground">Cofre · aporte mensal</p>
+                        </div>
+                      </div>
+                      <span className="font-medium tabular-nums text-sm text-violet-500">
+                        −{formatBRL(item.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {data.transactions.length === 0 && data.recurringPreview.length === 0 && !("vaultPreview" in data && data.vaultPreview.length > 0) && (
               <div className="rounded-xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">
                 Nenhuma movimentação ou previsão para {MONTHS[month]} {year}.
               </div>

@@ -124,12 +124,12 @@ export async function getTransactionStats() {
 export async function getMonthData(year: number, month: number) {
   const session = await getSession();
   if (!session)
-    return { income: 0, expense: 0, balance: 0, transactions: [], recurringPreview: [] };
+    return { income: 0, expense: 0, balance: 0, transactions: [], recurringPreview: [], vaultPreview: [], isFuture: false };
 
   const startOfMonth = new Date(year, month, 1);
   const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
 
-  const [stats, transactions, recurringExpenses, salary] = await Promise.all([
+  const [stats, transactions, recurringExpenses, salary, vaults] = await Promise.all([
     prisma.transaction.groupBy({
       by: ["type"],
       where: { userId: session.user.id, date: { gte: startOfMonth, lte: endOfMonth } },
@@ -143,6 +143,10 @@ export async function getMonthData(year: number, month: number) {
       where: { userId: session.user.id, active: true, startDate: { lte: endOfMonth }, endDate: { gte: startOfMonth } },
     }),
     prisma.fixedSalary.findUnique({ where: { userId: session.user.id, active: true } }),
+    // Cofres ativos cujo prazo ainda não passou (targetDate >= início do mês)
+    prisma.vault.findMany({
+      where: { userId: session.user.id, active: true, startDate: { lte: endOfMonth }, targetDate: { gte: startOfMonth } },
+    }),
   ]);
 
   const get = (type: "INCOME" | "EXPENSE") =>
@@ -151,7 +155,6 @@ export async function getMonthData(year: number, month: number) {
   const now = new Date();
   const isFuture = year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth());
 
-  // Transações reais já lançadas no mês (inclusive meses futuros com lançamentos manuais)
   const realIncome = get("INCOME");
   const realExpense = get("EXPENSE");
 
@@ -162,11 +165,12 @@ export async function getMonthData(year: number, month: number) {
       balance: realIncome - realExpense,
       transactions,
       recurringPreview: [],
+      vaultPreview: [],
       isFuture: false,
     };
   }
 
-  // Para meses futuros: recorrências que ainda NÃO foram lançadas
+  // Para meses futuros: recorrências e cofres que ainda NÃO foram lançados
   const launchedSources = new Set(transactions.map((t) => t.source));
 
   const recurringPreview = recurringExpenses
@@ -181,13 +185,25 @@ export async function getMonthData(year: number, month: number) {
       pending: true,
     }));
 
+  const vaultPreview = vaults
+    .filter((v) => !launchedSources.has(`vault_${v.id}`))
+    .map((v) => ({
+      id: v.id,
+      description: v.name,
+      amount: Number(v.monthlyAmount),
+      category: "Cofre",
+      dayOfMonth: 1,
+      type: "EXPENSE" as const,
+      pending: true,
+    }));
+
   const salaryAlreadyLaunched = launchedSources.has("fixed_salary");
   const salaryPreview = salary && !salaryAlreadyLaunched
     ? [{ id: salary.id, description: salary.description, amount: Number(salary.amount), category: "Salário", dayOfMonth: salary.dayOfMonth, type: "INCOME" as const, pending: true }]
     : [];
 
   const previewIncome = salaryPreview.reduce((s, i) => s + i.amount, 0);
-  const previewExpense = recurringPreview.reduce((s, i) => s + i.amount, 0);
+  const previewExpense = recurringPreview.reduce((s, i) => s + i.amount, 0) + vaultPreview.reduce((s, i) => s + i.amount, 0);
 
   return {
     income: realIncome + previewIncome,
@@ -195,6 +211,7 @@ export async function getMonthData(year: number, month: number) {
     balance: (realIncome + previewIncome) - (realExpense + previewExpense),
     transactions,
     recurringPreview: [...salaryPreview, ...recurringPreview],
+    vaultPreview,
     isFuture: true,
   };
 }
@@ -349,6 +366,54 @@ export async function getVaults() {
   const session = await getSession();
   if (!session) return [];
   return prisma.vault.findMany({ where: { userId: session.user.id, active: true }, orderBy: { createdAt: "desc" } });
+}
+
+export async function processVaultsForCurrentMonth(): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "Não autenticado" };
+
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+    const vaults = await prisma.vault.findMany({
+      where: {
+        userId: session.user.id,
+        active: true,
+        startDate: { lte: endOfMonth },
+        targetDate: { gte: startOfMonth },
+      },
+    });
+
+    for (const vault of vaults) {
+      const existing = await prisma.transaction.findFirst({
+        where: { userId: session.user.id, source: `vault_${vault.id}`, date: { gte: startOfMonth, lte: endOfMonth } },
+      });
+      if (existing) continue;
+
+      await prisma.transaction.create({
+        data: {
+          id: crypto.randomUUID(),
+          userId: session.user.id,
+          description: `Cofre: ${vault.name}`,
+          amount: vault.monthlyAmount,
+          type: "EXPENSE",
+          category: "Cofre",
+          source: `vault_${vault.id}`,
+          date: new Date(now.getFullYear(), now.getMonth(), 1),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    revalidateAll();
+    return { ok: true, data: undefined };
+  } catch (err) {
+    console.error("[processVaults]", err);
+    return { ok: false, error: "Erro ao processar cofres" };
+  }
 }
 
 export async function createVault(data: {

@@ -6,9 +6,9 @@ import {
   getFixedSalary,
   getRecurringExpenses,
   getVaults,
-  getMonthData,
   processFixedSalaryForCurrentMonth,
   processRecurringExpensesForCurrentMonth,
+  processVaultsForCurrentMonth,
 } from "@/lib/actions";
 import { StatCard } from "@/components/stat-card";
 import { MonthlyChart } from "@/components/monthly-chart";
@@ -17,7 +17,6 @@ import { FixedSalaryForm } from "@/components/fixed-salary-form";
 import { RecurringExpenseForm } from "@/components/recurring-expense-form";
 import { VaultCard, VaultCreateButton } from "@/components/vault-card";
 import { NotificationParser } from "@/components/notification-parser";
-import { MonthDashboard } from "@/components/month-dashboard";
 import { Wallet, ArrowDownCircle, ArrowUpCircle, TrendingUp } from "lucide-react";
 
 export const metadata = { title: "Visão Geral" };
@@ -30,19 +29,15 @@ export default async function DashboardPage() {
   await Promise.all([
     processFixedSalaryForCurrentMonth(),
     processRecurringExpensesForCurrentMonth(),
+    processVaultsForCurrentMonth(),
   ]);
 
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
-
-  const [transactions, stats, salary, recurringExpenses, vaults, monthData] = await Promise.all([
+  const [transactions, stats, salary, recurringExpenses, vaults] = await Promise.all([
     getTransactions(),
     getTransactionStats(),
     getFixedSalary(),
     getRecurringExpenses(),
     getVaults(),
-    getMonthData(currentYear, currentMonth),
   ]);
 
   return (
