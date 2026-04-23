@@ -117,6 +117,70 @@ export async function getTransactionStats() {
   return { income, expense, balance: income - expense, monthIncome, monthExpense, monthBalance: monthIncome - monthExpense };
 }
 
+// ── Stats e transações filtradas por mês ───────────────────────────────────
+
+export async function getMonthData(year: number, month: number) {
+  const session = await getSession();
+  if (!session)
+    return { income: 0, expense: 0, balance: 0, transactions: [], recurringPreview: [] };
+
+  const startOfMonth = new Date(year, month, 1);
+  const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
+
+  const [stats, transactions, recurringExpenses, salary] = await Promise.all([
+    prisma.transaction.groupBy({
+      by: ["type"],
+      where: { userId: session.user.id, date: { gte: startOfMonth, lte: endOfMonth } },
+      _sum: { amount: true },
+    }),
+    prisma.transaction.findMany({
+      where: { userId: session.user.id, date: { gte: startOfMonth, lte: endOfMonth } },
+      orderBy: { date: "desc" },
+    }),
+    prisma.recurringExpense.findMany({
+      where: { userId: session.user.id, active: true, startDate: { lte: endOfMonth }, endDate: { gte: startOfMonth } },
+    }),
+    prisma.fixedSalary.findUnique({ where: { userId: session.user.id, active: true } }),
+  ]);
+
+  const get = (type: "INCOME" | "EXPENSE") =>
+    Number(stats.find((r) => r.type === type)?._sum.amount ?? 0);
+
+  const income = get("INCOME");
+  const expense = get("EXPENSE");
+
+  // Previsão: despesas recorrentes que ainda não foram lançadas no mês futuro
+  const now = new Date();
+  const isFuture = year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth());
+
+  const recurringPreview = isFuture
+    ? recurringExpenses.map((e) => ({
+      id: e.id,
+      description: e.description,
+      amount: Number(e.amount),
+      category: e.category,
+      dayOfMonth: e.dayOfMonth,
+      type: "EXPENSE" as const,
+    }))
+    : [];
+
+  const salaryPreview = isFuture && salary
+    ? [{ id: salary.id, description: salary.description, amount: Number(salary.amount), category: "Salário", dayOfMonth: salary.dayOfMonth, type: "INCOME" as const }]
+    : [];
+
+  const previewIncome = salaryPreview.reduce((s, i) => s + i.amount, 0);
+  const previewExpense = recurringPreview.reduce((s, i) => s + i.amount, 0);
+
+  return {
+    income: isFuture ? previewIncome : income,
+    expense: isFuture ? previewExpense : expense,
+    balance: isFuture ? previewIncome - previewExpense : income - expense,
+    transactions,
+    recurringPreview: [...salaryPreview, ...recurringPreview],
+    isFuture,
+  };
+}
+
 // ── Salário fixo ───────────────────────────────────────────────────────────
 
 export async function getFixedSalary() {
