@@ -5,7 +5,6 @@ import { TransactionForm } from "@/components/transaction-form";
 import { TransactionListClient } from "@/components/transaction-list-client";
 
 export const metadata = { title: "Transações" };
-export const dynamic = "force-dynamic";
 
 export default async function TransactionsPage() {
   const session = await auth();

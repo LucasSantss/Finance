@@ -5,7 +5,6 @@ import { FixedSalaryForm } from "@/components/fixed-salary-form";
 import { RecurringExpenseForm } from "@/components/recurring-expense-form";
 
 export const metadata = { title: "Recorrências" };
-export const dynamic = "force-dynamic";
 
 export default async function RecurringPage() {
   const session = await auth();

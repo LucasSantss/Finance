@@ -18,6 +18,8 @@ function revalidateAll() {
   revalidatePath("/");
   revalidatePath("/transactions");
   revalidatePath("/insights");
+  revalidatePath("/planning");
+  revalidatePath("/recurring");
 }
 
 // ── Transações manuais ─────────────────────────────────────────────────────

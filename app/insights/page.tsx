@@ -5,7 +5,6 @@ import { MonthlyChart } from "@/components/monthly-chart";
 import { CategoryPieChart } from "@/components/category-pie-chart";
 
 export const metadata = { title: "Análises" };
-export const dynamic = "force-dynamic";
 
 export default async function InsightsPage() {
   const session = await auth();

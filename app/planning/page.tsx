@@ -4,7 +4,6 @@ import { getMonthData } from "@/lib/actions";
 import { MonthDashboard } from "@/components/month-dashboard";
 
 export const metadata = { title: "Planejamento" };
-export const dynamic = "force-dynamic";
 
 export default async function PlanningPage() {
   const session = await auth();
