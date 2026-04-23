@@ -146,38 +146,54 @@ export async function getMonthData(year: number, month: number) {
   const get = (type: "INCOME" | "EXPENSE") =>
     Number(stats.find((r) => r.type === type)?._sum.amount ?? 0);
 
-  const income = get("INCOME");
-  const expense = get("EXPENSE");
-
-  // Previsão: despesas recorrentes que ainda não foram lançadas no mês futuro
   const now = new Date();
   const isFuture = year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth());
 
-  const recurringPreview = isFuture
-    ? recurringExpenses.map((e) => ({
+  // Transações reais já lançadas no mês (inclusive meses futuros com lançamentos manuais)
+  const realIncome = get("INCOME");
+  const realExpense = get("EXPENSE");
+
+  if (!isFuture) {
+    return {
+      income: realIncome,
+      expense: realExpense,
+      balance: realIncome - realExpense,
+      transactions,
+      recurringPreview: [],
+      isFuture: false,
+    };
+  }
+
+  // Para meses futuros: recorrências que ainda NÃO foram lançadas
+  const launchedSources = new Set(transactions.map((t) => t.source));
+
+  const recurringPreview = recurringExpenses
+    .filter((e) => !launchedSources.has(`recurring_${e.id}`))
+    .map((e) => ({
       id: e.id,
       description: e.description,
       amount: Number(e.amount),
       category: e.category,
       dayOfMonth: e.dayOfMonth,
       type: "EXPENSE" as const,
-    }))
-    : [];
+      pending: true,
+    }));
 
-  const salaryPreview = isFuture && salary
-    ? [{ id: salary.id, description: salary.description, amount: Number(salary.amount), category: "Salário", dayOfMonth: salary.dayOfMonth, type: "INCOME" as const }]
+  const salaryAlreadyLaunched = launchedSources.has("fixed_salary");
+  const salaryPreview = salary && !salaryAlreadyLaunched
+    ? [{ id: salary.id, description: salary.description, amount: Number(salary.amount), category: "Salário", dayOfMonth: salary.dayOfMonth, type: "INCOME" as const, pending: true }]
     : [];
 
   const previewIncome = salaryPreview.reduce((s, i) => s + i.amount, 0);
   const previewExpense = recurringPreview.reduce((s, i) => s + i.amount, 0);
 
   return {
-    income: isFuture ? previewIncome : income,
-    expense: isFuture ? previewExpense : expense,
-    balance: isFuture ? previewIncome - previewExpense : income - expense,
+    income: realIncome + previewIncome,
+    expense: realExpense + previewExpense,
+    balance: (realIncome + previewIncome) - (realExpense + previewExpense),
     transactions,
     recurringPreview: [...salaryPreview, ...recurringPreview],
-    isFuture,
+    isFuture: true,
   };
 }
 

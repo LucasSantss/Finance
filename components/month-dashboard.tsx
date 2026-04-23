@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays, TrendingUp, ArrowUpCircle, ArrowDownCircle, Wallet, Eye } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, ArrowUpCircle, ArrowDownCircle, Wallet, Eye, Receipt } from "lucide-react";
 import { getMonthData } from "@/lib/actions";
 import { StatCard } from "@/components/stat-card";
 import { TransactionList } from "@/components/transaction-list";
@@ -112,41 +112,64 @@ export function MonthDashboard({ initialData, initialYear, initialMonth }: Month
         />
       </section>
 
-      {/* Previsão de mês futuro */}
-      {isFuture && data.recurringPreview.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Eye className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold text-foreground">Faturas previstas</h2>
-            <span className="text-xs text-muted-foreground">— baseado nas suas recorrências ativas</span>
-          </div>
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
-            {data.recurringPreview.map((item, i) => (
-              <div key={item.id} className={cn(
-                "flex items-center justify-between px-4 py-3 text-sm",
-                i > 0 && "border-t border-border"
-              )}>
-                <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "flex h-7 w-7 items-center justify-center rounded-full text-xs",
-                    item.type === "INCOME" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
-                  )}>
-                    {item.type === "INCOME" ? "+" : "-"}
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">{item.description}</p>
-                    <p className="text-xs text-muted-foreground">{item.category} · dia {item.dayOfMonth}</p>
-                  </div>
-                </div>
-                <span className={cn(
-                  "font-medium tabular-nums",
-                  item.type === "INCOME" ? "text-emerald-500" : "text-red-500"
-                )}>
-                  {item.type === "INCOME" ? "+" : "-"}{formatBRL(item.amount)}
-                </span>
+      {/* Mês futuro: transações já lançadas + recorrências pendentes */}
+      {isFuture && (
+        <section className="space-y-4">
+          {/* Transações já lançadas no mês futuro */}
+          {data.transactions.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Receipt className="h-4 w-4 text-muted-foreground" />
+                <h2 className="text-sm font-semibold text-foreground">Já lançadas em {MONTHS[month]}</h2>
+                <span className="text-xs text-muted-foreground">— transações registradas</span>
               </div>
-            ))}
-          </div>
+              <TransactionList transactions={data.transactions} limit={data.transactions.length} />
+            </div>
+          )}
+
+          {/* Recorrências ainda pendentes */}
+          {data.recurringPreview.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-muted-foreground" />
+                <h2 className="text-sm font-semibold text-foreground">Faturas previstas</h2>
+                <span className="text-xs text-muted-foreground">— ainda não lançadas</span>
+              </div>
+              <div className="rounded-xl border border-border bg-card overflow-hidden">
+                {data.recurringPreview.map((item, i) => (
+                  <div key={item.id} className={cn(
+                    "flex items-center justify-between px-4 py-3 text-sm",
+                    i > 0 && "border-t border-border"
+                  )}>
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium",
+                        item.type === "INCOME" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                      )}>
+                        {item.type === "INCOME" ? "+" : "-"}
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">{item.description}</p>
+                        <p className="text-xs text-muted-foreground">{item.category} · dia {item.dayOfMonth}</p>
+                      </div>
+                    </div>
+                    <span className={cn(
+                      "font-medium tabular-nums",
+                      item.type === "INCOME" ? "text-emerald-500" : "text-red-500"
+                    )}>
+                      {item.type === "INCOME" ? "+" : "-"}{formatBRL(item.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {data.transactions.length === 0 && data.recurringPreview.length === 0 && (
+            <div className="rounded-xl border border-dashed border-border px-6 py-10 text-center text-sm text-muted-foreground">
+              Nenhuma movimentação ou previsão para {MONTHS[month]} {year}.
+            </div>
+          )}
         </section>
       )}
 
