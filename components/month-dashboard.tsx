@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useCallback } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays, ArrowUpCircle, ArrowDownCircle, Wallet, Eye, Receipt, Loader2, PiggyBank } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, ArrowUpCircle, ArrowDownCircle, Wallet, Eye, Receipt, Loader2, PiggyBank, UtensilsCrossed } from "lucide-react";
 import { getMonthData } from "@/lib/actions";
 import { StatCard } from "@/components/stat-card";
 import { TransactionList } from "@/components/transaction-list";
@@ -94,17 +94,21 @@ export function MonthDashboard({ initialData, initialYear, initialMonth }: Month
 
       {/* Stats do mês */}
       <div className={cn("transition-opacity duration-150", isPending && "opacity-40 pointer-events-none")}>
-        <section className="grid gap-4 sm:grid-cols-3 mb-6">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+          <StatCard
+            label={isFuture ? "Saldo previsto" : "Saldo do mês"}
+            value={data.balance} icon={Wallet}
+            tone={data.balance >= 0 ? "positive" : "negative"} />
+          <StatCard
+            label="VA/VR"
+            value={data.vaVrBalance} icon={UtensilsCrossed}
+            tone="warning" />
           <StatCard
             label={isFuture ? "Receitas previstas" : "Receitas do mês"}
             value={data.income} icon={ArrowUpCircle} tone="positive" />
           <StatCard
             label={isFuture ? "Despesas previstas" : "Despesas do mês"}
             value={data.expense} icon={ArrowDownCircle} tone="negative" />
-          <StatCard
-            label={isFuture ? "Saldo previsto" : "Saldo do mês"}
-            value={data.balance} icon={Wallet}
-            tone={data.balance >= 0 ? "positive" : "negative"} />
         </section>
 
         {/* Mês futuro */}

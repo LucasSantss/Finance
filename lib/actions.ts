@@ -159,11 +159,15 @@ export async function getMonthData(year: number, month: number) {
   const realIncome = get("INCOME");
   const realExpense = get("EXPENSE");
 
+  const vaVrIncomeReal = transactions.filter(t => t.category === "VA/VR" && t.type === "INCOME").reduce((s, t) => s + Number(t.amount), 0);
+  const vaVrExpenseReal = transactions.filter(t => t.category === "VA/VR" && t.type === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
+
   if (!isFuture) {
     return {
       income: realIncome,
       expense: realExpense,
       balance: realIncome - realExpense,
+      vaVrBalance: vaVrIncomeReal - vaVrExpenseReal,
       transactions,
       recurringPreview: [],
       vaultPreview: [],
@@ -210,11 +214,15 @@ export async function getMonthData(year: number, month: number) {
 
   const previewIncome = salaryPreview.reduce((s, i) => s + i.amount, 0) + vaVrPreview.reduce((s, i) => s + i.amount, 0);
   const previewExpense = recurringPreview.reduce((s, i) => s + i.amount, 0) + vaultPreview.reduce((s, i) => s + i.amount, 0);
+  
+  const vaVrIncomeTotal = vaVrIncomeReal + vaVrPreview.reduce((s, i) => s + i.amount, 0);
+  const vaVrBalance = vaVrIncomeTotal - vaVrExpenseReal;
 
   return {
     income: realIncome + previewIncome,
     expense: realExpense + previewExpense,
     balance: (realIncome + previewIncome) - (realExpense + previewExpense),
+    vaVrBalance,
     transactions,
     recurringPreview: [...salaryPreview, ...vaVrPreview, ...recurringPreview],
     vaultPreview,
