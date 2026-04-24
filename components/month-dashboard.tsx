@@ -101,7 +101,7 @@ export function MonthDashboard({ initialData, initialYear, initialMonth }: Month
             tone={data.balance >= 0 ? "positive" : "negative"} />
           <StatCard
             label="VA/VR"
-            value={data.vaVrBalance} icon={UtensilsCrossed}
+            value={data.vaVrBalance ?? 0} icon={UtensilsCrossed}
             tone="warning" />
           <StatCard
             label={isFuture ? "Receitas previstas" : "Receitas do mês"}
