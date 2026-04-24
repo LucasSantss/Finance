@@ -33,9 +33,11 @@ export function TransactionList({ transactions, limit }: TransactionListProps) {
             <div
               className={cn(
                 "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-                isIncome
-                  ? "bg-success/10 text-success"
-                  : "bg-destructive/10 text-destructive"
+                t.category === "VA/VR"
+                  ? "bg-orange-500/10 text-orange-500"
+                  : isIncome
+                    ? "bg-success/10 text-success"
+                    : "bg-destructive/10 text-destructive"
               )}
             >
               {isIncome ? (
@@ -62,7 +64,7 @@ export function TransactionList({ transactions, limit }: TransactionListProps) {
             <div
               className={cn(
                 "shrink-0 text-sm font-semibold tabular-nums",
-                isIncome ? "text-success" : "text-foreground"
+                t.category === "VA/VR" ? "text-orange-500" : isIncome ? "text-success" : "text-foreground"
               )}
             >
               {isIncome ? "+" : "−"} {formatBRL(Number(t.amount))}

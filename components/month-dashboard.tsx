@@ -137,7 +137,7 @@ export function MonthDashboard({ initialData, initialYear, initialMonth }: Month
                       <div className="flex items-center gap-3">
                         <div className={cn(
                           "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold shrink-0",
-                          item.type === "INCOME" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                          item.category === "VA/VR" ? "bg-orange-500/10 text-orange-500" : (item.type === "INCOME" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500")
                         )}>
                           {item.type === "INCOME" ? "+" : "−"}
                         </div>
@@ -148,7 +148,7 @@ export function MonthDashboard({ initialData, initialYear, initialMonth }: Month
                       </div>
                       <span className={cn(
                         "font-medium tabular-nums text-sm",
-                        item.type === "INCOME" ? "text-emerald-500" : "text-red-500"
+                        item.category === "VA/VR" ? "text-orange-500" : (item.type === "INCOME" ? "text-emerald-500" : "text-red-500")
                       )}>
                         {item.type === "INCOME" ? "+" : "−"}{formatBRL(item.amount)}
                       </span>
