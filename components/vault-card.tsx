@@ -147,9 +147,8 @@ export function VaultCreateButton() {
         </div>
         <div className="space-y-1 mt-2">
           <label className="text-xs text-muted-foreground">Meta até</label>
-            <input type="month" value={form.targetDate} onChange={(e) => setForm({ ...form, targetDate: e.target.value })}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
-          </div>
+          <input type="month" value={form.targetDate} onChange={(e) => setForm({ ...form, targetDate: e.target.value })}
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
         </div>
       </div>
       {error && <p className="text-xs text-red-500">{error}</p>}
