@@ -138,22 +138,32 @@ export function TransactionForm() {
           <label htmlFor="category" className="text-xs font-medium text-foreground">
             Categoria
           </label>
-          <select
-            id="category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            required
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          >
-            <option value="" disabled>
-              Selecione
-            </option>
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-wrap gap-1.5">
+            {categories.map((c) => {
+              const isVaVr = c === "VA/VR";
+              const isSelected = category === c;
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCategory(c)}
+                  className={cn(
+                    "rounded-md px-2.5 py-1 text-xs font-medium border transition-colors",
+                    isSelected
+                      ? isVaVr
+                        ? "bg-orange-500 border-orange-500 text-white"
+                        : "bg-primary border-primary text-primary-foreground"
+                      : isVaVr
+                        ? "border-orange-500/50 text-orange-500 hover:bg-orange-500/10"
+                        : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+                  )}
+                >
+                  {c}
+                </button>
+              );
+            })}
+          </div>
+          <input type="hidden" value={category} required />
         </div>
 
         {/* Submit */}

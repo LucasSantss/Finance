@@ -24,6 +24,10 @@ const COLORS = [
   "hsl(var(--chart-5))",
 ];
 
+const CATEGORY_COLOR: Record<string, string> = {
+  "VA/VR": "#f97316",
+};
+
 export function CategoryPieChart({ transactions }: Props) {
   const data = useMemo(() => {
     const map = new Map<string, number>();
@@ -58,8 +62,8 @@ export function CategoryPieChart({ transactions }: Props) {
             stroke="hsl(var(--card))"
             strokeWidth={2}
           >
-            {data.map((_, i) => (
-              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+            {data.map((entry, i) => (
+              <Cell key={i} fill={CATEGORY_COLOR[entry.name] ?? COLORS[i % COLORS.length]} />
             ))}
           </Pie>
           <Tooltip
