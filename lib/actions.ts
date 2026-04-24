@@ -193,7 +193,7 @@ export async function getMonthData(year: number, month: number) {
       description: v.name,
       amount: Number(v.monthlyAmount),
       category: "Cofre",
-      dayOfMonth: 1,
+      dayOfMonth: v.dayOfMonth,
       type: "EXPENSE" as const,
       pending: true,
     }));
@@ -493,6 +493,8 @@ export async function processVaultsForCurrentMonth(): Promise<ActionResult> {
       });
       if (existing) continue;
 
+      const vaultDate = new Date(now.getFullYear(), now.getMonth(), Math.min(vault.dayOfMonth, endOfMonth.getDate()));
+
       await prisma.transaction.create({
         data: {
           id: crypto.randomUUID(),
@@ -502,7 +504,7 @@ export async function processVaultsForCurrentMonth(): Promise<ActionResult> {
           type: "EXPENSE",
           category: "Cofre",
           source: `vault_${vault.id}`,
-          date: new Date(now.getFullYear(), now.getMonth(), 1),
+          date: vaultDate,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -522,6 +524,7 @@ export async function createVault(data: {
   monthlyAmount: number;
   targetDate: string;
   startDate?: string;
+  dayOfMonth?: number;
 }): Promise<ActionResult<{ id: string }>> {
   const session = await getSession();
   if (!session) return { ok: false, error: "Não autenticado" };
@@ -530,7 +533,7 @@ export async function createVault(data: {
 
   try {
     const vault = await prisma.vault.create({
-      data: { id: crypto.randomUUID(), userId: session.user.id, name: data.name, monthlyAmount: data.monthlyAmount, targetDate: new Date(data.targetDate), startDate: data.startDate ? new Date(data.startDate) : new Date() },
+      data: { id: crypto.randomUUID(), userId: session.user.id, name: data.name, monthlyAmount: data.monthlyAmount, dayOfMonth: data.dayOfMonth ?? 5, targetDate: new Date(data.targetDate), startDate: data.startDate ? new Date(data.startDate) : new Date() },
       select: { id: true },
     });
     revalidateAll();

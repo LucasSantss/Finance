@@ -83,7 +83,7 @@ export function VaultCard({ vault }: { vault: Vault }) {
 
 export function VaultCreateButton() {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", monthlyAmount: "", targetDate: "" });
+  const [form, setForm] = useState({ name: "", monthlyAmount: "", targetDate: "", dayOfMonth: "5" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -94,11 +94,12 @@ export function VaultCreateButton() {
       name: form.name,
       monthlyAmount: parseFloat(form.monthlyAmount),
       targetDate: form.targetDate + "-28",
+      dayOfMonth: parseInt(form.dayOfMonth),
     });
     setLoading(false);
     if (result.ok) {
       setOpen(false);
-      setForm({ name: "", monthlyAmount: "", targetDate: "" });
+      setForm({ name: "", monthlyAmount: "", targetDate: "", dayOfMonth: "5" });
     } else {
       setError(result.error);
     }
@@ -139,7 +140,13 @@ export function VaultCreateButton() {
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Meta até</label>
+            <label className="text-xs text-muted-foreground">Dia do débito</label>
+            <input type="number" min="1" max="28" value={form.dayOfMonth} onChange={(e) => setForm({ ...form, dayOfMonth: e.target.value })}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+          </div>
+        </div>
+        <div className="space-y-1 mt-2">
+          <label className="text-xs text-muted-foreground">Meta até</label>
             <input type="month" value={form.targetDate} onChange={(e) => setForm({ ...form, targetDate: e.target.value })}
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
           </div>

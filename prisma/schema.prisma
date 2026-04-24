@@ -122,6 +122,7 @@ model Vault {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name          String
   monthlyAmount Decimal  @db.Decimal(10, 2)
+  dayOfMonth    Int      @default(5)
   targetDate    DateTime
   startDate     DateTime @default(now())
   active        Boolean  @default(true)
