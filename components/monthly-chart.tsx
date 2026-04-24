@@ -23,8 +23,12 @@ export function MonthlyChart({ transactions }: Props) {
     const months: {
       key: string;
       label: string;
-      income: number;
-      expense: number;
+      incomeGeral: number;
+      expenseGeral: number;
+      balanceGeral: number;
+      incomeVaVr: number;
+      expenseVaVr: number;
+      balanceVaVr: number;
     }[] = [];
     const now = new Date();
 
@@ -33,8 +37,12 @@ export function MonthlyChart({ transactions }: Props) {
       months.push({
         key: `${d.getFullYear()}-${d.getMonth()}`,
         label: monthLabel(d),
-        income: 0,
-        expense: 0,
+        incomeGeral: 0,
+        expenseGeral: 0,
+        balanceGeral: 0,
+        incomeVaVr: 0,
+        expenseVaVr: 0,
+        balanceVaVr: 0,
       });
     }
 
@@ -45,9 +53,22 @@ export function MonthlyChart({ transactions }: Props) {
       const k = `${d.getFullYear()}-${d.getMonth()}`;
       const i = idx.get(k);
       if (i === undefined) continue;
+      
       const v = Number(t.amount);
-      if (t.type === "INCOME") months[i].income += v;
-      else months[i].expense += v;
+      const isVaVr = t.category === "VA/VR";
+
+      if (isVaVr) {
+        if (t.type === "INCOME") months[i].incomeVaVr += v;
+        else months[i].expenseVaVr += v;
+      } else {
+        if (t.type === "INCOME") months[i].incomeGeral += v;
+        else months[i].expenseGeral += v;
+      }
+    }
+
+    for (const m of months) {
+      m.balanceGeral = m.incomeGeral - m.expenseGeral;
+      m.balanceVaVr = m.incomeVaVr - m.expenseVaVr;
     }
 
     return months;
@@ -101,18 +122,35 @@ export function MonthlyChart({ transactions }: Props) {
             iconType="circle"
           />
           <Bar
-            dataKey="income"
-            name="Receitas"
+            dataKey="balanceGeral"
+            name="Saldo Geral"
+            stackId="geral"
             fill="hsl(var(--chart-1))"
-            radius={[6, 6, 0, 0]}
-            maxBarSize={36}
+            maxBarSize={32}
           />
           <Bar
-            dataKey="expense"
+            dataKey="expenseGeral"
             name="Despesas"
+            stackId="geral"
             fill="hsl(var(--chart-2))"
-            radius={[6, 6, 0, 0]}
-            maxBarSize={36}
+            radius={[4, 4, 0, 0]}
+            maxBarSize={32}
+          />
+          <Bar
+            dataKey="balanceVaVr"
+            name="Saldo VA/VR"
+            stackId="vavr"
+            fill="hsl(var(--chart-4))"
+            maxBarSize={32}
+          />
+          <Bar
+            dataKey="expenseVaVr"
+            name="Despesas VA/VR"
+            stackId="vavr"
+            fill="hsl(var(--chart-2))"
+            opacity={0.8}
+            radius={[4, 4, 0, 0]}
+            maxBarSize={32}
           />
         </BarChart>
       </ResponsiveContainer>
