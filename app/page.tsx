@@ -21,7 +21,7 @@ import { RecurringExpenseForm } from "@/components/recurring-expense-form";
 import { VaultCard, VaultCreateButton } from "@/components/vault-card";
 import { VaVrForm } from "@/components/va-vr-form";
 import { NotificationParser } from "@/components/notification-parser";
-import { Wallet, ArrowDownCircle, ArrowUpCircle, TrendingUp } from "lucide-react";
+import { Wallet, ArrowDownCircle, ArrowUpCircle, TrendingUp, UtensilsCrossed } from "lucide-react";
 
 export const metadata = { title: "Visão Geral" };
 export const dynamic = "force-dynamic";
@@ -61,7 +61,7 @@ export default async function DashboardPage() {
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Saldo do mês" value={stats.monthBalance} icon={Wallet}
           tone={stats.monthBalance >= 0 ? "positive" : "negative"} hint="Receitas menos despesas no mês atual" />
-        <StatCard label="Receitas no mês" value={stats.monthIncome} icon={ArrowUpCircle} tone="positive" />
+        <StatCard label="VA/VR" value={vaVrBalance.balance} icon={UtensilsCrossed} tone="warning" hint="Saldo de alimentação do mês" />
         <StatCard label="Despesas no mês" value={stats.monthExpense} icon={ArrowDownCircle} tone="negative" />
         <StatCard label="Saldo total" value={stats.balance} icon={TrendingUp}
           tone={stats.balance >= 0 ? "positive" : "negative"} hint="Considerando todo o histórico" />

@@ -6,7 +6,7 @@ interface StatCardProps {
   label: string;
   value: number;
   icon: LucideIcon;
-  tone?: "neutral" | "positive" | "negative";
+  tone?: "neutral" | "positive" | "negative" | "warning";
   hint?: string;
 }
 
@@ -29,6 +29,7 @@ export function StatCard({
               "mt-2 text-2xl font-semibold tabular-nums tracking-tight",
               tone === "positive" && "text-success",
               tone === "negative" && "text-destructive",
+              tone === "warning" && "text-orange-500",
               tone === "neutral" && "text-foreground"
             )}
           >
@@ -43,6 +44,7 @@ export function StatCard({
             "flex h-9 w-9 items-center justify-center rounded-lg",
             tone === "positive" && "bg-success/10 text-success",
             tone === "negative" && "bg-destructive/10 text-destructive",
+            tone === "warning" && "bg-orange-500/10 text-orange-500",
             tone === "neutral" && "bg-muted text-foreground"
           )}
         >
