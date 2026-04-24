@@ -38,8 +38,8 @@ export function RecurringExpenseForm({ expenses }: { expenses: RecurringExpense[
       amount: parseFloat(form.amount),
       category: form.category,
       dayOfMonth: parseInt(form.dayOfMonth),
-      startDate: form.startDate,
-      endDate: form.endDate,
+      startDate: form.startDate ? form.startDate + "-01" : "",
+      endDate: form.endDate ? form.endDate + "-28" : "",
     });
     setLoading(false);
     if (result.ok) {
@@ -108,13 +108,21 @@ export function RecurringExpenseForm({ expenses }: { expenses: RecurringExpense[
             </div>
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Início</label>
-              <input type="month" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value + "-01" })}
-                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+              <input
+                type="month"
+                lang="pt-BR"
+                value={form.startDate}
+                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary [color-scheme:light] dark:[color-scheme:dark]" />
             </div>
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Término</label>
-              <input type="month" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value + "-28" })}
-                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+              <input
+                type="month"
+                lang="pt-BR"
+                value={form.endDate}
+                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary [color-scheme:light] dark:[color-scheme:dark]" />
             </div>
           </div>
           {error && <p className="text-xs text-red-500">{error}</p>}
