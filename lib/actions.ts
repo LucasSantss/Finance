@@ -129,7 +129,7 @@ export async function getMonthData(year: number, month: number) {
   const startOfMonth = new Date(year, month, 1);
   const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
 
-  const [stats, transactions, recurringExpenses, salary, vaults] = await Promise.all([
+  const [stats, transactions, recurringExpenses, salary, vaVr, vaults] = await Promise.all([
     prisma.transaction.groupBy({
       by: ["type"],
       where: { userId: session.user.id, date: { gte: startOfMonth, lte: endOfMonth } },
@@ -143,6 +143,7 @@ export async function getMonthData(year: number, month: number) {
       where: { userId: session.user.id, active: true, startDate: { lte: endOfMonth }, endDate: { gte: startOfMonth } },
     }),
     prisma.fixedSalary.findUnique({ where: { userId: session.user.id, active: true } }),
+    prisma.vaVr.findUnique({ where: { userId: session.user.id, active: true } }),
     // Cofres ativos cujo prazo ainda não passou (targetDate >= início do mês)
     prisma.vault.findMany({
       where: { userId: session.user.id, active: true, startDate: { lte: endOfMonth }, targetDate: { gte: startOfMonth } },
@@ -202,7 +203,12 @@ export async function getMonthData(year: number, month: number) {
     ? [{ id: salary.id, description: salary.description, amount: Number(salary.amount), category: "Salário", dayOfMonth: salary.dayOfMonth, type: "INCOME" as const, pending: true }]
     : [];
 
-  const previewIncome = salaryPreview.reduce((s, i) => s + i.amount, 0);
+  const vaVrAlreadyLaunched = launchedSources.has("va_vr");
+  const vaVrPreview = vaVr && !vaVrAlreadyLaunched
+    ? [{ id: vaVr.id, description: "VA/VR", amount: Number(vaVr.amount), category: "VA/VR", dayOfMonth: vaVr.dayOfMonth, type: "INCOME" as const, pending: true }]
+    : [];
+
+  const previewIncome = salaryPreview.reduce((s, i) => s + i.amount, 0) + vaVrPreview.reduce((s, i) => s + i.amount, 0);
   const previewExpense = recurringPreview.reduce((s, i) => s + i.amount, 0) + vaultPreview.reduce((s, i) => s + i.amount, 0);
 
   return {
@@ -210,7 +216,7 @@ export async function getMonthData(year: number, month: number) {
     expense: realExpense + previewExpense,
     balance: (realIncome + previewIncome) - (realExpense + previewExpense),
     transactions,
-    recurringPreview: [...salaryPreview, ...recurringPreview],
+    recurringPreview: [...salaryPreview, ...vaVrPreview, ...recurringPreview],
     vaultPreview,
     isFuture: true,
   };
@@ -222,6 +228,101 @@ export async function getFixedSalary() {
   const session = await getSession();
   if (!session) return null;
   return prisma.fixedSalary.findUnique({ where: { userId: session.user.id } });
+}
+
+// ── VA/VR ──────────────────────────────────────────────────────────────────
+
+export async function getVaVr() {
+  const session = await getSession();
+  if (!session) return null;
+  return prisma.vaVr.findUnique({ where: { userId: session.user.id } });
+}
+
+export async function upsertVaVr(data: {
+  amount: number;
+  dayOfMonth?: number;
+}): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "Não autenticado" };
+  if (data.amount <= 0) return { ok: false, error: "Valor inválido" };
+
+  try {
+    await prisma.vaVr.upsert({
+      where: { userId: session.user.id },
+      update: { amount: data.amount, dayOfMonth: data.dayOfMonth ?? 5, active: true, updatedAt: new Date() },
+      create: { id: crypto.randomUUID(), userId: session.user.id, amount: data.amount, dayOfMonth: data.dayOfMonth ?? 5 },
+    });
+    revalidateAll();
+    return { ok: true, data: undefined };
+  } catch (err) {
+    console.error("[upsertVaVr]", err);
+    return { ok: false, error: "Erro ao salvar VA/VR" };
+  }
+}
+
+export async function processVaVrForCurrentMonth(): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "Não autenticado" };
+
+  try {
+    const vaVr = await prisma.vaVr.findUnique({ where: { userId: session.user.id, active: true } });
+    if (!vaVr) return { ok: true, data: undefined };
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+    const existing = await prisma.transaction.findFirst({
+      where: { userId: session.user.id, source: "va_vr", date: { gte: startOfMonth, lte: endOfMonth } },
+    });
+    if (existing) return { ok: true, data: undefined };
+
+    const creditDate = new Date(now.getFullYear(), now.getMonth(), Math.min(vaVr.dayOfMonth, endOfMonth.getDate()));
+
+    await prisma.transaction.create({
+      data: {
+        id: crypto.randomUUID(),
+        userId: session.user.id,
+        description: "VA/VR",
+        amount: vaVr.amount,
+        type: "INCOME",
+        category: "VA/VR",
+        source: "va_vr",
+        date: creditDate,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    revalidateAll();
+    return { ok: true, data: undefined };
+  } catch (err) {
+    console.error("[processVaVr]", err);
+    return { ok: false, error: "Erro ao processar VA/VR" };
+  }
+}
+
+export async function getVaVrMonthBalance(year: number, month: number): Promise<{ credited: number; spent: number; balance: number }> {
+  const session = await getSession();
+  if (!session) return { credited: 0, spent: 0, balance: 0 };
+
+  const startOfMonth = new Date(year, month, 1);
+  const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
+
+  const [credited, spent] = await Promise.all([
+    prisma.transaction.aggregate({
+      where: { userId: session.user.id, category: "VA/VR", type: "INCOME", date: { gte: startOfMonth, lte: endOfMonth } },
+      _sum: { amount: true },
+    }),
+    prisma.transaction.aggregate({
+      where: { userId: session.user.id, category: "VA/VR", type: "EXPENSE", date: { gte: startOfMonth, lte: endOfMonth } },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  const creditedAmt = Number(credited._sum.amount ?? 0);
+  const spentAmt = Number(spent._sum.amount ?? 0);
+  return { credited: creditedAmt, spent: spentAmt, balance: creditedAmt - spentAmt };
 }
 
 export async function upsertFixedSalary(data: {

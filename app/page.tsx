@@ -6,9 +6,12 @@ import {
   getFixedSalary,
   getRecurringExpenses,
   getVaults,
+  getVaVr,
+  getVaVrMonthBalance,
   processFixedSalaryForCurrentMonth,
   processRecurringExpensesForCurrentMonth,
   processVaultsForCurrentMonth,
+  processVaVrForCurrentMonth,
 } from "@/lib/actions";
 import { StatCard } from "@/components/stat-card";
 import { MonthlyChart } from "@/components/monthly-chart";
@@ -16,6 +19,7 @@ import { TransactionForm } from "@/components/transaction-form";
 import { FixedSalaryForm } from "@/components/fixed-salary-form";
 import { RecurringExpenseForm } from "@/components/recurring-expense-form";
 import { VaultCard, VaultCreateButton } from "@/components/vault-card";
+import { VaVrForm } from "@/components/va-vr-form";
 import { NotificationParser } from "@/components/notification-parser";
 import { Wallet, ArrowDownCircle, ArrowUpCircle, TrendingUp } from "lucide-react";
 
@@ -30,14 +34,18 @@ export default async function DashboardPage() {
     processFixedSalaryForCurrentMonth(),
     processRecurringExpensesForCurrentMonth(),
     processVaultsForCurrentMonth(),
+    processVaVrForCurrentMonth(),
   ]);
 
-  const [transactions, stats, salary, recurringExpenses, vaults] = await Promise.all([
+  const now = new Date();
+  const [transactions, stats, salary, recurringExpenses, vaults, vaVr, vaVrBalance] = await Promise.all([
     getTransactions(),
     getTransactionStats(),
     getFixedSalary(),
     getRecurringExpenses(),
     getVaults(),
+    getVaVr(),
+    getVaVrMonthBalance(new Date().getFullYear(), new Date().getMonth()),
   ]);
 
   return (
@@ -89,8 +97,13 @@ export default async function DashboardPage() {
       <NotificationParser />
 
       {/* Automações */}
-      <section className="grid gap-6 lg:grid-cols-2">
-        <FixedSalaryForm salary={salary} />
+      <section className="space-y-6">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Receitas fixas</h2>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <FixedSalaryForm salary={salary} />
+          <VaVrForm vaVr={vaVr} monthBalance={vaVrBalance} />
+        </div>
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Despesas recorrentes</h2>
         <RecurringExpenseForm expenses={recurringExpenses} />
       </section>
     </div>

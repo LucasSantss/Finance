@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getFixedSalary, getRecurringExpenses } from "@/lib/actions";
+import { getFixedSalary, getRecurringExpenses, getVaVr, getVaVrMonthBalance } from "@/lib/actions";
 import { FixedSalaryForm } from "@/components/fixed-salary-form";
 import { RecurringExpenseForm } from "@/components/recurring-expense-form";
+import { VaVrForm } from "@/components/va-vr-form";
 
 export const metadata = { title: "Recorrências" };
 
@@ -10,9 +11,12 @@ export default async function RecurringPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const [salary, recurringExpenses] = await Promise.all([
+  const now = new Date();
+  const [salary, recurringExpenses, vaVr, vaVrBalance] = await Promise.all([
     getFixedSalary(),
     getRecurringExpenses(),
+    getVaVr(),
+    getVaVrMonthBalance(now.getFullYear(), now.getMonth()),
   ]);
 
   return (
@@ -22,13 +26,24 @@ export default async function RecurringPage() {
           Recorrências
         </h1>
         <p className="text-sm text-muted-foreground">
-          Salário fixo e despesas automáticas mensais.
+          Salário fixo, VA/VR e despesas automáticas mensais.
         </p>
       </header>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <FixedSalaryForm salary={salary} />
+
+      {/* Receitas fixas */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Receitas fixas</h2>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <FixedSalaryForm salary={salary} />
+          <VaVrForm vaVr={vaVr} monthBalance={vaVrBalance} />
+        </div>
+      </section>
+
+      {/* Despesas recorrentes */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Despesas recorrentes</h2>
         <RecurringExpenseForm expenses={recurringExpenses} />
-      </div>
+      </section>
     </div>
   );
 }

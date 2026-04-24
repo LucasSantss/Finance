@@ -18,6 +18,7 @@ model User {
   sessions          Session[]
   transactions      Transaction[]
   fixedSalary       FixedSalary?
+  vaVr              VaVr?
   recurringExpenses RecurringExpense[]
   vaults            Vault[]
   createdAt         DateTime           @default(now())
@@ -129,6 +130,19 @@ model Vault {
 
   @@index([userId])
   @@map("vaults")
+}
+
+model VaVr {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount     Decimal  @db.Decimal(10, 2)
+  dayOfMonth Int      @default(5)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("va_vr")
 }
 
 enum TransactionType {

@@ -38,6 +38,7 @@ export function todayISO(): string {
 export const EXPENSE_CATEGORIES = [
   "Moradia",
   "Alimentação",
+  "VA/VR",
   "Transporte",
   "Saúde",
   "Educação",
@@ -50,6 +51,7 @@ export const EXPENSE_CATEGORIES = [
 
 export const INCOME_CATEGORIES = [
   "Salário",
+  "VA/VR",
   "Freelance",
   "Investimentos",
   "Renda Extra",
