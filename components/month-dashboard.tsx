@@ -100,15 +100,16 @@ export function MonthDashboard({ initialData, initialYear, initialMonth }: Month
             value={data.balance} icon={Wallet}
             tone={data.balance >= 0 ? "positive" : "negative"} />
           <StatCard
+            label={isFuture ? "Despesas previstas" : "Despesas do mês"}
+            value={data.expense} icon={ArrowDownCircle} tone="negative" />
+          <StatCard
             label="VA/VR"
             value={data.vaVrBalance ?? 0} icon={UtensilsCrossed}
             tone="warning" />
           <StatCard
-            label={isFuture ? "Receitas previstas" : "Receitas do mês"}
-            value={data.income} icon={ArrowUpCircle} tone="positive" />
-          <StatCard
-            label={isFuture ? "Despesas previstas" : "Despesas do mês"}
-            value={data.expense} icon={ArrowDownCircle} tone="negative" />
+            label="Gastos VA/VR"
+            value={data.vaVrExpense ?? 0} icon={ArrowDownCircle}
+            tone="negative" />
         </section>
 
         {/* Mês futuro */}
