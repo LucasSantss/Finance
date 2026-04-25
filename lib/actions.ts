@@ -629,9 +629,10 @@ export async function getAccumulativeBalance(): Promise<{
   };
 }
 
-// ── Saldo restante do mês anterior (carry-over) ───────────────────────────
-// Retorna o saldo de salário e VA/VR acumulado até o último dia do mês ANTERIOR
-// ao (year, month) passado. Usado para projeção de saldo futuro no planejamento.
+// ── Saldo carry-over acumulado (real + projeções intermediárias) ──────────
+// Para meses passados/atual: soma transações reais até o fim do mês anterior.
+// Para meses futuros: soma o real até hoje + simula cada mês intermediário
+// usando salário fixo, VA/VR e despesas recorrentes, acumulando o saldo.
 
 export async function getMonthlyCarryOver(year: number, month: number): Promise<{
   salary: number;
@@ -640,30 +641,111 @@ export async function getMonthlyCarryOver(year: number, month: number): Promise<
   const session = await getSession();
   if (!session) return { salary: 0, vaVr: 0 };
 
-  // Fim do mês anterior
-  const prevMonthEnd = new Date(year, month, 0, 23, 59, 59, 999);
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
 
-  const transactions = await prisma.transaction.findMany({
-    where: { userId: session.user.id, date: { lte: prevMonthEnd } },
+  // ── 1. Saldo real até o fim do mês atual ──────────────────────────────────
+  const realEnd = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59, 999);
+
+  const realTransactions = await prisma.transaction.findMany({
+    where: { userId: session.user.id, date: { lte: realEnd } },
     select: { type: true, amount: true, category: true },
   });
 
-  let salaryIncome = 0, salaryExpense = 0, vaVrIncome = 0, vaVrExpense = 0;
+  let salaryBal = 0, vaVrBal = 0;
 
-  for (const t of transactions) {
+  for (const t of realTransactions) {
     const amount = Number(t.amount);
     const isVaVr = t.category === "VA/VR";
     if (t.type === "INCOME") {
-      if (isVaVr) vaVrIncome += amount; else salaryIncome += amount;
+      if (isVaVr) vaVrBal += amount; else salaryBal += amount;
     } else {
-      if (isVaVr) vaVrExpense += amount; else salaryExpense += amount;
+      if (isVaVr) vaVrBal -= amount; else salaryBal -= amount;
     }
   }
 
-  return {
-    salary: salaryIncome - salaryExpense,
-    vaVr: vaVrIncome - vaVrExpense,
-  };
+  // Se o mês alvo é o mês atual ou anterior, retorna só o real (fim do mês anterior)
+  const targetIsCurrent = year === currentYear && month === currentMonth;
+  const targetIsPast = year < currentYear || (year === currentYear && month < currentMonth);
+
+  if (targetIsPast || targetIsCurrent) {
+    // Precisa do saldo até o fim do mês ANTERIOR ao alvo
+    const prevEnd = new Date(year, month, 0, 23, 59, 59, 999);
+    const prevTransactions = await prisma.transaction.findMany({
+      where: { userId: session.user.id, date: { lte: prevEnd } },
+      select: { type: true, amount: true, category: true },
+    });
+
+    let s = 0, v = 0;
+    for (const t of prevTransactions) {
+      const amount = Number(t.amount);
+      const isVaVr = t.category === "VA/VR";
+      if (t.type === "INCOME") {
+        if (isVaVr) v += amount; else s += amount;
+      } else {
+        if (isVaVr) v -= amount; else s -= amount;
+      }
+    }
+    return { salary: s, vaVr: v };
+  }
+
+  // ── 2. Para meses futuros: simular cada mês entre currentMonth+1 e month-1 ─
+  const [salary, vaVr, recurringExpenses] = await Promise.all([
+    prisma.fixedSalary.findUnique({ where: { userId: session.user.id, active: true } }),
+    prisma.vaVr.findUnique({ where: { userId: session.user.id, active: true } }),
+    prisma.recurringExpense.findMany({ where: { userId: session.user.id, active: true } }),
+  ]);
+
+  // Itera mês a mês de (currentMonth+1) até (month-1), acumulando projeções
+  let simYear = currentYear;
+  let simMonth = currentMonth + 1;
+  if (simMonth > 11) { simMonth = 0; simYear++; }
+
+  while (simYear < year || (simYear === year && simMonth < month)) {
+    const simStart = new Date(simYear, simMonth, 1);
+    const simEnd = new Date(simYear, simMonth + 1, 0, 23, 59, 59, 999);
+
+    // Transações reais já lançadas nesse mês (pode haver lançamentos antecipados)
+    const simReal = await prisma.transaction.findMany({
+      where: { userId: session.user.id, date: { gte: simStart, lte: simEnd } },
+      select: { type: true, amount: true, category: true, source: true },
+    });
+
+    const launchedSources = new Set(simReal.map(t => t.source));
+
+    // Contabiliza reais do mês simulado
+    for (const t of simReal) {
+      const amount = Number(t.amount);
+      const isVaVr = t.category === "VA/VR";
+      if (t.type === "INCOME") {
+        if (isVaVr) vaVrBal += amount; else salaryBal += amount;
+      } else {
+        if (isVaVr) vaVrBal -= amount; else salaryBal -= amount;
+      }
+    }
+
+    // Adiciona receitas/despesas fixas que ainda não foram lançadas
+    if (salary && !launchedSources.has("fixed_salary")) {
+      salaryBal += Number(salary.amount);
+    }
+    if (vaVr && !launchedSources.has("va_vr")) {
+      vaVrBal += Number(vaVr.amount);
+    }
+    for (const exp of recurringExpenses) {
+      const expStart = new Date(exp.startDate);
+      const expEnd = new Date(exp.endDate);
+      if (simStart <= expEnd && simEnd >= expStart && !launchedSources.has(`recurring_${exp.id}`)) {
+        salaryBal -= Number(exp.amount);
+      }
+    }
+
+    // Avança para o próximo mês
+    simMonth++;
+    if (simMonth > 11) { simMonth = 0; simYear++; }
+  }
+
+  return { salary: salaryBal, vaVr: vaVrBal };
 }
 
 // ── Acumulativo até um mês específico ─────────────────────────────────────
