@@ -60,8 +60,8 @@ export default async function DashboardPage() {
       {/* Stats globais */}
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Saldo do mês" value={stats.monthBalance} icon={Wallet}
-          tone={stats.monthBalance >= 0 ? "positive" : "negative"} hint="Salário menos despesas gerais e cofres" />
-        <StatCard label="Despesas no mês" value={stats.monthGeneralExpense} icon={ArrowDownCircle} tone="negative" hint="Gastos gerais e cofres, sem VA/VR" />
+          tone={stats.monthBalance >= 0 ? "positive" : "negative"} hint="Salário menos despesas gerais" />
+        <StatCard label="Despesas no mês" value={stats.monthGeneralExpense} icon={ArrowDownCircle} tone="negative" hint="Gastos gerais" />
         <StatCard label="VA/VR" value={stats.monthVaVrBalance} icon={UtensilsCrossed} tone="warning" hint="Saldo de alimentação do mês" />
         <StatCard label="Gastos VA/VR" value={stats.monthVaVrExpense} icon={ArrowDownCircle} tone="negative" hint="Total gasto com VA/VR no mês" />
       </section>
