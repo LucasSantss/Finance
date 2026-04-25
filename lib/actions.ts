@@ -93,7 +93,8 @@ export async function getTransactionStats() {
     return { income: 0, expense: 0, balance: 0, monthIncome: 0, monthExpense: 0, monthBalance: 0, monthVaVrBalance: 0, monthVaVrExpense: 0, monthGeneralExpense: 0 };
 
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
   const [allTime, thisMonth, thisMonthTransactions] = await Promise.all([
     prisma.transaction.groupBy({
@@ -103,11 +104,11 @@ export async function getTransactionStats() {
     }),
     prisma.transaction.groupBy({
       by: ["type"],
-      where: { userId: session.user.id, date: { gte: startOfMonth } },
+      where: { userId: session.user.id, date: { gte: startOfMonth, lte: endOfCurrentMonth } },
       _sum: { amount: true },
     }),
     prisma.transaction.findMany({
-      where: { userId: session.user.id, date: { gte: startOfMonth } },
+      where: { userId: session.user.id, date: { gte: startOfMonth, lte: endOfCurrentMonth } },
       select: { type: true, amount: true, category: true, source: true },
     }),
   ]);
