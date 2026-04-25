@@ -8,6 +8,7 @@ import {
   getVaults,
   getVaVr,
   getVaVrMonthBalance,
+  getMonthData,
   getMonthlyCarryOver,
   processFixedSalaryForCurrentMonth,
   processRecurringExpensesForCurrentMonth,
@@ -43,7 +44,7 @@ export default async function DashboardPage() {
   const year = now.getFullYear();
   const month = now.getMonth();
 
-  const [transactions, stats, salary, recurringExpenses, vaults, vaVr, vaVrBalance, carryOver] = await Promise.all([
+  const [transactions, stats, salary, recurringExpenses, vaults, vaVr, vaVrBalance, monthData, carryOver] = await Promise.all([
     getTransactions(),
     getTransactionStats(),
     getFixedSalary(),
@@ -51,18 +52,19 @@ export default async function DashboardPage() {
     getVaults(),
     getVaVr(),
     getVaVrMonthBalance(year, month),
+    getMonthData(year, month),
     getMonthlyCarryOver(year, month),
   ]);
 
   const projectedSalary = {
     prevBalance: carryOver.salary,
-    monthBalance: stats.monthBalance,
-    total: carryOver.salary + stats.monthBalance,
+    monthBalance: monthData.balance,
+    total: carryOver.salary + monthData.balance,
   };
   const projectedVaVr = {
     prevBalance: carryOver.vaVr,
-    monthBalance: stats.monthVaVrBalance,
-    total: carryOver.vaVr + stats.monthVaVrBalance,
+    monthBalance: monthData.vaVrBalance ?? 0,
+    total: carryOver.vaVr + (monthData.vaVrBalance ?? 0),
   };
 
   return (

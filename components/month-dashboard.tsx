@@ -23,10 +23,8 @@ export function MonthDashboard({ initialData, initialYear, initialMonth, initial
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
   const [data, setData] = useState(initialData);
-  const [carryOver, setCarryOver] = useState(initialCarryOver ?? null);
-  const [isPending, startTransition] = useTransition();
-
-  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
+  const [carryOver, setCarryOver] = useState(initialCarryOver ?? { salary: 0, vaVr: 0 });
+  const [isPending, startTransition] = useTransition();  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
 
   const loadMonth = useCallback((y: number, m: number) => {
     setYear(y);
@@ -37,7 +35,7 @@ export function MonthDashboard({ initialData, initialYear, initialMonth, initial
         getMonthlyCarryOver(y, m),
       ]);
       setData(d);
-      setCarryOver(co);
+      setCarryOver(co ?? { salary: 0, vaVr: 0 });
     });
   }, []);
 
@@ -52,9 +50,8 @@ export function MonthDashboard({ initialData, initialYear, initialMonth, initial
   const isFuture = data.isFuture;
 
   // Saldo projetado = saldo do mês + carry-over do mês anterior (separado)
-  const projectedSalaryBalance = (data.balance) + (carryOver?.salary ?? 0);
-  const projectedVaVrBalance = (data.vaVrBalance ?? 0) + (carryOver?.vaVr ?? 0);
-  const hasPrevBalance = carryOver !== null && (carryOver.salary !== 0 || carryOver.vaVr !== 0);
+  const projectedSalaryBalance = data.balance + carryOver.salary;
+  const projectedVaVrBalance = (data.vaVrBalance ?? 0) + carryOver.vaVr;
 
   return (
     <div className="space-y-6">
@@ -124,7 +121,7 @@ export function MonthDashboard({ initialData, initialYear, initialMonth, initial
         </section>
 
         {/* Card de projeção com carry-over separado */}
-        {carryOver !== null && (
+        {(
           <div className="rounded-xl border border-border bg-card/50 p-4 shadow-soft mb-6">
             <p className="text-xs uppercase tracking-wider text-muted-foreground mb-4">
               Projeção com saldo do mês anterior

@@ -127,7 +127,8 @@ export async function getTransactionStats() {
   const monthSalaryIncome = monthIncome - monthVaVrIncome;
   const monthGeneralExpense = monthExpense - monthVaVrExpense - monthVaultExpense;
   const monthVaVrBalance = monthVaVrIncome - monthVaVrExpense;
-  const monthBalance = monthSalaryIncome - monthGeneralExpense - monthVaultExpense;
+  // monthGeneralExpense já exclui cofre; não subtrair novamente
+  const monthBalance = monthSalaryIncome - monthGeneralExpense;
 
   return { income, expense, balance: income - expense, monthIncome, monthExpense, monthBalance, monthVaVrBalance, monthVaVrExpense, monthGeneralExpense };
 }
