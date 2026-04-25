@@ -24,46 +24,41 @@ const COLORS = [
   "hsl(var(--chart-5))",
 ];
 
-const CATEGORY_COLOR: Record<string, string> = {
-  "VA/VR": "#f97316",
-};
+const VAVR_COLORS = ["#f97316", "#fb923c", "#fdba74"];
 
-export function CategoryPieChart({ transactions }: Props) {
-  const data = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const t of transactions) {
-      if (t.type !== "EXPENSE") continue;
-      map.set(t.category, (map.get(t.category) ?? 0) + Number(t.amount));
-    }
-    return [...map.entries()]
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-  }, [transactions]);
-
+function PieSection({
+  data,
+  colors,
+  emptyMessage,
+}: {
+  data: { name: string; value: number }[];
+  colors: string[];
+  emptyMessage: string;
+}) {
   if (data.length === 0) {
     return (
       <p className="py-10 text-center text-sm text-muted-foreground">
-        Sem despesas registradas ainda.
+        {emptyMessage}
       </p>
     );
   }
 
   return (
-    <div className="h-80">
+    <div className="h-72">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
             data={data}
             dataKey="value"
             nameKey="name"
-            innerRadius={70}
-            outerRadius={110}
+            innerRadius={60}
+            outerRadius={100}
             paddingAngle={2}
             stroke="hsl(var(--card))"
             strokeWidth={2}
           >
-            {data.map((entry, i) => (
-              <Cell key={i} fill={CATEGORY_COLOR[entry.name] ?? COLORS[i % COLORS.length]} />
+            {data.map((_, i) => (
+              <Cell key={i} fill={colors[i % colors.length]} />
             ))}
           </Pie>
           <Tooltip
@@ -82,6 +77,56 @@ export function CategoryPieChart({ transactions }: Props) {
           />
         </PieChart>
       </ResponsiveContainer>
+    </div>
+  );
+}
+
+export function CategoryPieChart({ transactions }: Props) {
+  const { generalData, vaVrData } = useMemo(() => {
+    const generalMap = new Map<string, number>();
+    const vaVrMap = new Map<string, number>();
+
+    for (const t of transactions) {
+      if (t.type !== "EXPENSE") continue;
+      if (t.category === "VA/VR") {
+        vaVrMap.set(t.category, (vaVrMap.get(t.category) ?? 0) + Number(t.amount));
+      } else {
+        generalMap.set(t.category, (generalMap.get(t.category) ?? 0) + Number(t.amount));
+      }
+    }
+
+    return {
+      generalData: [...generalMap.entries()]
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value),
+      vaVrData: [...vaVrMap.entries()]
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value),
+    };
+  }, [transactions]);
+
+  return (
+    <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+      <div>
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Despesas gerais
+        </h3>
+        <PieSection
+          data={generalData}
+          colors={COLORS}
+          emptyMessage="Sem despesas gerais registradas."
+        />
+      </div>
+      <div>
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-orange-500">
+          VA / VR
+        </h3>
+        <PieSection
+          data={vaVrData}
+          colors={VAVR_COLORS}
+          emptyMessage="Sem despesas de VA/VR registradas."
+        />
+      </div>
     </div>
   );
 }
