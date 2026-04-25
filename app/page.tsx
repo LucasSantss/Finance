@@ -23,6 +23,7 @@ import { VaVrForm } from "@/components/va-vr-form";
 import { NotificationParser } from "@/components/notification-parser";
 import { Wallet, ArrowDownCircle, UtensilsCrossed } from "lucide-react";
 import { AccumulativeCard } from "@/components/accumulative-card";
+import { getAccumulativeBalance } from "@/lib/actions";
 
 export const metadata = { title: "Visão Geral" };
 export const dynamic = "force-dynamic";
@@ -39,9 +40,10 @@ export default async function DashboardPage() {
   ]);
 
   const now = new Date();
-  const [transactions, stats, salary, recurringExpenses, vaults, vaVr, vaVrBalance] = await Promise.all([
+  const [transactions, stats, salary, recurringExpenses, vaults, vaVr, vaVrBalance, accumulative] = await Promise.all([
     getTransactions(),
     getTransactionStats(),
+    getAccumulativeBalance(),
     getFixedSalary(),
     getRecurringExpenses(),
     getVaults(),
@@ -68,11 +70,7 @@ export default async function DashboardPage() {
       </section>
 
       {/* Acumulativo */}
-      <AccumulativeCard
-        totalIncome={stats.income}
-        totalExpense={stats.expense}
-        totalBalance={stats.balance}
-      />
+      <AccumulativeCard salary={accumulative.salary} vaVr={accumulative.vaVr} />
 
       {/* Gráfico + Formulário */}
       <section className="grid gap-6 lg:grid-cols-3">

@@ -589,3 +589,40 @@ export async function deleteVault(id: string): Promise<ActionResult> {
     return { ok: false, error: "Erro ao excluir cofre" };
   }
 }
+
+// ── Acumulativo separado: salário e VA/VR ─────────────────────────────────
+
+export async function getAccumulativeBalance(): Promise<{
+  salary: { totalIncome: number; totalExpense: number; balance: number };
+  vaVr: { totalIncome: number; totalExpense: number; balance: number };
+}> {
+  const session = await getSession();
+  const empty = { salary: { totalIncome: 0, totalExpense: 0, balance: 0 }, vaVr: { totalIncome: 0, totalExpense: 0, balance: 0 } };
+  if (!session) return empty;
+
+  const transactions = await prisma.transaction.findMany({
+    where: { userId: session.user.id },
+    select: { type: true, amount: true, category: true, source: true, date: true },
+    orderBy: { date: "asc" },
+  });
+
+  let salaryIncome = 0, salaryExpense = 0, vaVrIncome = 0, vaVrExpense = 0;
+
+  for (const t of transactions) {
+    const amount = Number(t.amount);
+    const isVaVr = t.category === "VA/VR";
+
+    if (t.type === "INCOME") {
+      if (isVaVr) vaVrIncome += amount;
+      else salaryIncome += amount;
+    } else {
+      if (isVaVr) vaVrExpense += amount;
+      else salaryExpense += amount;
+    }
+  }
+
+  return {
+    salary: { totalIncome: salaryIncome, totalExpense: salaryExpense, balance: salaryIncome - salaryExpense },
+    vaVr: { totalIncome: vaVrIncome, totalExpense: vaVrExpense, balance: vaVrIncome - vaVrExpense },
+  };
+}
