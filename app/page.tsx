@@ -43,12 +43,12 @@ export default async function DashboardPage() {
   const [transactions, stats, salary, recurringExpenses, vaults, vaVr, vaVrBalance, accumulative] = await Promise.all([
     getTransactions(),
     getTransactionStats(),
-    getAccumulativeBalance(),
     getFixedSalary(),
     getRecurringExpenses(),
     getVaults(),
     getVaVr(),
     getVaVrMonthBalance(new Date().getFullYear(), new Date().getMonth()),
+    getAccumulativeBalance(),
   ]);
 
   return (
