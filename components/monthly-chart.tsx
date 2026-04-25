@@ -53,7 +53,7 @@ export function MonthlyChart({ transactions }: Props) {
       const k = `${d.getFullYear()}-${d.getMonth()}`;
       const i = idx.get(k);
       if (i === undefined) continue;
-      
+
       const v = Number(t.amount);
       const isVaVr = t.category === "VA/VR";
 
@@ -122,25 +122,18 @@ export function MonthlyChart({ transactions }: Props) {
             iconType="circle"
           />
           <Bar
-            dataKey="balanceGeral"
-            name="Saldo Geral"
-            stackId="geral"
-            fill="hsl(var(--chart-1))"
-            maxBarSize={32}
-          />
-          <Bar
             dataKey="expenseGeral"
             name="Despesas"
             stackId="geral"
             fill="hsl(var(--chart-2))"
-            radius={[4, 4, 0, 0]}
             maxBarSize={32}
           />
           <Bar
-            dataKey="balanceVaVr"
-            name="Saldo VA/VR"
-            stackId="vavr"
-            fill="hsl(var(--chart-4))"
+            dataKey="balanceGeral"
+            name="Saldo Geral"
+            stackId="geral"
+            fill="hsl(var(--chart-1))"
+            radius={[4, 4, 0, 0]}
             maxBarSize={32}
           />
           <Bar
@@ -149,6 +142,13 @@ export function MonthlyChart({ transactions }: Props) {
             stackId="vavr"
             fill="hsl(var(--chart-2))"
             opacity={0.8}
+            maxBarSize={32}
+          />
+          <Bar
+            dataKey="balanceVaVr"
+            name="Saldo VA/VR"
+            stackId="vavr"
+            fill="hsl(var(--chart-4))"
             radius={[4, 4, 0, 0]}
             maxBarSize={32}
           />
