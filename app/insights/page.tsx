@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getTransactions } from "@/lib/actions";
+import { getTransactions, getFixedSalary, getVaVr } from "@/lib/actions";
 import { MonthlyChart } from "@/components/monthly-chart";
 import { CategoryPieChart } from "@/components/category-pie-chart";
 
@@ -10,7 +10,11 @@ export default async function InsightsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const transactions = await getTransactions();
+  const [transactions, salary, vaVr] = await Promise.all([
+    getTransactions(),
+    getFixedSalary(),
+    getVaVr(),
+  ]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -34,7 +38,11 @@ export default async function InsightsPage() {
         <h2 className="mb-4 text-sm font-semibold text-foreground">
           Despesas por categoria (histórico)
         </h2>
-        <CategoryPieChart transactions={transactions} />
+        <CategoryPieChart
+          transactions={transactions}
+          fixedSalary={salary ? Number(salary.amount) : 0}
+          fixedVaVr={vaVr ? Number(vaVr.amount) : 0}
+        />
       </div>
     </div>
   );
