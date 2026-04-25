@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition, useCallback } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays, ArrowUpCircle, ArrowDownCircle, Wallet, Eye, Receipt, Loader2, PiggyBank, UtensilsCrossed } from "lucide-react";
-import { getMonthData } from "@/lib/actions";
+import { ChevronLeft, ChevronRight, CalendarDays, ArrowDownCircle, Wallet, Eye, Receipt, Loader2, PiggyBank, UtensilsCrossed, TrendingUp, TrendingDown } from "lucide-react";
+import { getMonthData, getMonthlyCarryOver } from "@/lib/actions";
 import { StatCard } from "@/components/stat-card";
 import { TransactionList } from "@/components/transaction-list";
 import { cn, formatBRL } from "@/lib/utils";
@@ -15,13 +15,15 @@ interface MonthDashboardProps {
   initialData: MonthData;
   initialYear: number;
   initialMonth: number;
+  initialCarryOver?: { salary: number; vaVr: number };
 }
 
-export function MonthDashboard({ initialData, initialYear, initialMonth }: MonthDashboardProps) {
+export function MonthDashboard({ initialData, initialYear, initialMonth, initialCarryOver }: MonthDashboardProps) {
   const now = new Date();
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
   const [data, setData] = useState(initialData);
+  const [carryOver, setCarryOver] = useState(initialCarryOver ?? null);
   const [isPending, startTransition] = useTransition();
 
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
@@ -30,8 +32,12 @@ export function MonthDashboard({ initialData, initialYear, initialMonth }: Month
     setYear(y);
     setMonth(m);
     startTransition(async () => {
-      const d = await getMonthData(y, m);
+      const [d, co] = await Promise.all([
+        getMonthData(y, m),
+        getMonthlyCarryOver(y, m),
+      ]);
       setData(d);
+      setCarryOver(co);
     });
   }, []);
 
@@ -44,6 +50,276 @@ export function MonthDashboard({ initialData, initialYear, initialMonth }: Month
   }
 
   const isFuture = data.isFuture;
+
+  // Saldo projetado = saldo do mês + carry-over do mês anterior (separado)
+  const projectedSalaryBalance = (data.balance) + (carryOver?.salary ?? 0);
+  const projectedVaVrBalance = (data.vaVrBalance ?? 0) + (carryOver?.vaVr ?? 0);
+  const hasPrevBalance = carryOver !== null && (carryOver.salary !== 0 || carryOver.vaVr !== 0);
+
+  return (
+    <div className="space-y-6">
+      {/* Seletor de mês */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-1">
+          <button onClick={() => navigate(-1)}
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-border hover:bg-accent transition-colors disabled:opacity-40"
+            disabled={isPending}>
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          <div className="flex items-center gap-2 min-w-[172px] justify-center px-3 h-8 rounded-md border border-border bg-card">
+            {isPending
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+              : <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+            }
+            <span className="text-sm font-medium text-foreground">
+              {MONTHS[month]} {year}
+            </span>
+            {isFuture && (
+              <span className="rounded-full bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-medium text-violet-500 leading-none">
+                previsão
+              </span>
+            )}
+            {isCurrentMonth && (
+              <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-500 leading-none">
+                atual
+              </span>
+            )}
+          </div>
+
+          <button onClick={() => navigate(1)}
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-border hover:bg-accent transition-colors disabled:opacity-40"
+            disabled={isPending}>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        {!isCurrentMonth && (
+          <button onClick={() => loadMonth(now.getFullYear(), now.getMonth())}
+            disabled={isPending}
+            className="h-8 rounded-md border border-border px-3 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-40">
+            Mês atual
+          </button>
+        )}
+      </div>
+
+      {/* Stats do mês */}
+      <div className={cn("transition-opacity duration-150", isPending && "opacity-40 pointer-events-none")}>
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+          <StatCard
+            label={isFuture ? "Saldo previsto" : "Saldo do mês"}
+            value={data.balance} icon={Wallet}
+            tone={data.balance >= 0 ? "positive" : "negative"} />
+          <StatCard
+            label={isFuture ? "Despesas previstas" : "Despesas do mês"}
+            value={data.expense} icon={ArrowDownCircle} tone="negative" />
+          <StatCard
+            label="VA/VR"
+            value={data.vaVrBalance ?? 0} icon={UtensilsCrossed}
+            tone="warning" />
+          <StatCard
+            label="Gastos VA/VR"
+            value={data.vaVrExpense ?? 0} icon={ArrowDownCircle}
+            tone="negative" />
+        </section>
+
+        {/* Card de projeção com carry-over separado */}
+        {carryOver !== null && (
+          <div className="rounded-xl border border-border bg-card/50 p-4 shadow-soft mb-6">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-4">
+              Projeção com saldo do mês anterior
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+              {/* Salário */}
+              <div className="rounded-lg border border-border bg-card p-3 space-y-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Salário</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-0.5">Saldo anterior</p>
+                    <p className={cn(
+                      "text-sm font-semibold tabular-nums",
+                      carryOver.salary >= 0 ? "text-success" : "text-destructive"
+                    )}>{formatBRL(carryOver.salary)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-0.5">{isFuture ? "Previsto" : "Deste mês"}</p>
+                    <p className={cn(
+                      "text-sm font-semibold tabular-nums",
+                      data.balance >= 0 ? "text-success" : "text-destructive"
+                    )}>{formatBRL(data.balance)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-0.5">Total projetado</p>
+                    <div className="flex items-center gap-1">
+                      <p className={cn(
+                        "text-sm font-bold tabular-nums",
+                        projectedSalaryBalance >= 0 ? "text-success" : "text-destructive"
+                      )}>
+                        {formatBRL(projectedSalaryBalance)}
+                      </p>
+                      {projectedSalaryBalance >= 0
+                        ? <TrendingUp className="h-3 w-3 text-success" />
+                        : <TrendingDown className="h-3 w-3 text-destructive" />
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* VA/VR */}
+              <div className="rounded-lg border border-orange-500/20 bg-card p-3 space-y-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-orange-500">VA / VR</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-0.5">Saldo anterior</p>
+                    <p className={cn(
+                      "text-sm font-semibold tabular-nums",
+                      carryOver.vaVr >= 0 ? "text-orange-500" : "text-destructive"
+                    )}>{formatBRL(carryOver.vaVr)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-0.5">{isFuture ? "Previsto" : "Deste mês"}</p>
+                    <p className={cn(
+                      "text-sm font-semibold tabular-nums",
+                      (data.vaVrBalance ?? 0) >= 0 ? "text-orange-500" : "text-destructive"
+                    )}>{formatBRL(data.vaVrBalance ?? 0)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-0.5">Total projetado</p>
+                    <div className="flex items-center gap-1">
+                      <p className={cn(
+                        "text-sm font-bold tabular-nums",
+                        projectedVaVrBalance >= 0 ? "text-orange-500" : "text-destructive"
+                      )}>
+                        {formatBRL(projectedVaVrBalance)}
+                      </p>
+                      {projectedVaVrBalance >= 0
+                        ? <TrendingUp className="h-3 w-3 text-orange-500" />
+                        : <TrendingDown className="h-3 w-3 text-destructive" />
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* Mês futuro */}
+        {isFuture && (
+          <div className="space-y-5">
+            {data.transactions.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="text-sm font-semibold text-foreground">Já lançadas em {MONTHS[month]}</h2>
+                  <span className="text-xs text-muted-foreground">— transações registradas</span>
+                </div>
+                <TransactionList transactions={data.transactions} limit={data.transactions.length} />
+              </div>
+            )}
+
+            {data.recurringPreview.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="text-sm font-semibold text-foreground">Faturas previstas</h2>
+                  <span className="text-xs text-muted-foreground">— ainda não lançadas</span>
+                </div>
+                <div className="rounded-xl border border-border bg-card overflow-hidden shadow-soft">
+                  {data.recurringPreview.map((item, i) => (
+                    <div key={item.id} className={cn(
+                      "flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-accent/40",
+                      i > 0 && "border-t border-border"
+                    )}>
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold shrink-0",
+                          item.category === "VA/VR" ? "bg-orange-500/10 text-orange-500" : (item.type === "INCOME" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500")
+                        )}>
+                          {item.type === "INCOME" ? "+" : "−"}
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{item.description}</p>
+                          <p className="text-xs text-muted-foreground">{item.category} · dia {item.dayOfMonth}</p>
+                        </div>
+                      </div>
+                      <span className={cn(
+                        "font-medium tabular-nums text-sm",
+                        item.category === "VA/VR" ? "text-orange-500" : (item.type === "INCOME" ? "text-emerald-500" : "text-red-500")
+                      )}>
+                        {item.type === "INCOME" ? "+" : "−"}{formatBRL(item.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {("vaultPreview" in data) && data.vaultPreview.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <PiggyBank className="h-4 w-4 text-violet-500" />
+                  <h2 className="text-sm font-semibold text-foreground">Cofres previstos</h2>
+                  <span className="text-xs text-muted-foreground">— reservas mensais programadas</span>
+                </div>
+                <div className="rounded-xl border border-border bg-card overflow-hidden shadow-soft">
+                  {data.vaultPreview.map((item, i) => (
+                    <div key={item.id} className={cn(
+                      "flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-accent/40",
+                      i > 0 && "border-t border-border"
+                    )}>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-500/10 text-violet-500 text-xs font-semibold shrink-0">
+                          <PiggyBank className="h-3.5 w-3.5" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{item.description}</p>
+                          <p className="text-xs text-muted-foreground">Cofre · aporte mensal</p>
+                        </div>
+                      </div>
+                      <span className="font-medium tabular-nums text-sm text-violet-500">
+                        −{formatBRL(item.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {data.transactions.length === 0 && data.recurringPreview.length === 0 && !("vaultPreview" in data && data.vaultPreview.length > 0) && (
+              <div className="rounded-xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">
+                Nenhuma movimentação ou previsão para {MONTHS[month]} {year}.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mês passado / atual */}
+        {!isFuture && (
+          <section className="space-y-3">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">
+                Movimentações de {MONTHS[month]}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {data.transactions.length} {data.transactions.length === 1 ? "transação" : "transações"}
+              </p>
+            </div>
+            {data.transactions.length > 0
+              ? <TransactionList transactions={data.transactions} limit={data.transactions.length} />
+              : <div className="rounded-xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">
+                Nenhuma movimentação em {MONTHS[month]} {year}.
+              </div>
+            }
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className="space-y-6">
