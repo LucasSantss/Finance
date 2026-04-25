@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getMonthData } from "@/lib/actions";
+import { getMonthData, getTransactionStats } from "@/lib/actions";
 import { MonthDashboard } from "@/components/month-dashboard";
+import { AccumulativeCard } from "@/components/accumulative-card";
 
 export const metadata = { title: "Planejamento" };
 
@@ -12,7 +13,10 @@ export default async function PlanningPage() {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
-  const initialData = await getMonthData(year, month);
+  const [initialData, stats] = await Promise.all([
+    getMonthData(year, month),
+    getTransactionStats(),
+  ]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -24,6 +28,11 @@ export default async function PlanningPage() {
           Histórico de meses anteriores e previsão dos próximos.
         </p>
       </header>
+      <AccumulativeCard
+        totalIncome={stats.income}
+        totalExpense={stats.expense}
+        totalBalance={stats.balance}
+      />
       <MonthDashboard
         initialData={initialData}
         initialYear={year}
