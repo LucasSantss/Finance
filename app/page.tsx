@@ -21,7 +21,7 @@ import { RecurringExpenseForm } from "@/components/recurring-expense-form";
 import { VaultCard, VaultCreateButton } from "@/components/vault-card";
 import { VaVrForm } from "@/components/va-vr-form";
 import { NotificationParser } from "@/components/notification-parser";
-import { Wallet, ArrowDownCircle, ArrowUpCircle, TrendingUp, UtensilsCrossed } from "lucide-react";
+import { Wallet, ArrowDownCircle, TrendingUp, UtensilsCrossed } from "lucide-react";
 
 export const metadata = { title: "Visão Geral" };
 export const dynamic = "force-dynamic";
@@ -60,11 +60,10 @@ export default async function DashboardPage() {
       {/* Stats globais */}
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Saldo do mês" value={stats.monthBalance} icon={Wallet}
-          tone={stats.monthBalance >= 0 ? "positive" : "negative"} hint="Receitas menos despesas no mês atual" />
-        <StatCard label="VA/VR" value={vaVrBalance.balance} icon={UtensilsCrossed} tone="warning" hint="Saldo de alimentação do mês" />
-        <StatCard label="Despesas no mês" value={stats.monthExpense} icon={ArrowDownCircle} tone="negative" />
-        <StatCard label="Saldo total" value={stats.balance} icon={TrendingUp}
-          tone={stats.balance >= 0 ? "positive" : "negative"} hint="Considerando todo o histórico" />
+          tone={stats.monthBalance >= 0 ? "positive" : "negative"} hint="Salário menos despesas gerais e cofres" />
+        <StatCard label="Despesas no mês" value={stats.monthGeneralExpense} icon={ArrowDownCircle} tone="negative" hint="Gastos gerais e cofres, sem VA/VR" />
+        <StatCard label="VA/VR" value={stats.monthVaVrBalance} icon={UtensilsCrossed} tone="warning" hint="Saldo de alimentação do mês" />
+        <StatCard label="Gastos VA/VR" value={stats.monthVaVrExpense} icon={ArrowDownCircle} tone="negative" hint="Total gasto com VA/VR no mês" />
       </section>
 
       {/* Gráfico + Formulário */}

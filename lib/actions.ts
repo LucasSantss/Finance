@@ -90,12 +90,12 @@ export async function getTransactions() {
 export async function getTransactionStats() {
   const session = await getSession();
   if (!session)
-    return { income: 0, expense: 0, balance: 0, monthIncome: 0, monthExpense: 0, monthBalance: 0 };
+    return { income: 0, expense: 0, balance: 0, monthIncome: 0, monthExpense: 0, monthBalance: 0, monthVaVrBalance: 0, monthVaVrExpense: 0, monthGeneralExpense: 0 };
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [allTime, thisMonth] = await Promise.all([
+  const [allTime, thisMonth, thisMonthTransactions] = await Promise.all([
     prisma.transaction.groupBy({
       by: ["type"],
       where: { userId: session.user.id },
@@ -105,6 +105,10 @@ export async function getTransactionStats() {
       by: ["type"],
       where: { userId: session.user.id, date: { gte: startOfMonth } },
       _sum: { amount: true },
+    }),
+    prisma.transaction.findMany({
+      where: { userId: session.user.id, date: { gte: startOfMonth } },
+      select: { type: true, amount: true, category: true, source: true },
     }),
   ]);
 
@@ -116,7 +120,16 @@ export async function getTransactionStats() {
   const monthIncome = get(thisMonth, "INCOME");
   const monthExpense = get(thisMonth, "EXPENSE");
 
-  return { income, expense, balance: income - expense, monthIncome, monthExpense, monthBalance: monthIncome - monthExpense };
+  const monthVaVrIncome = thisMonthTransactions.filter(t => t.category === "VA/VR" && t.type === "INCOME").reduce((s, t) => s + Number(t.amount), 0);
+  const monthVaVrExpense = thisMonthTransactions.filter(t => t.category === "VA/VR" && t.type === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
+  const monthVaultExpense = thisMonthTransactions.filter(t => t.source?.startsWith("vault_") && t.type === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
+
+  const monthSalaryIncome = monthIncome - monthVaVrIncome;
+  const monthGeneralExpense = monthExpense - monthVaVrExpense - monthVaultExpense;
+  const monthVaVrBalance = monthVaVrIncome - monthVaVrExpense;
+  const monthBalance = monthSalaryIncome - monthGeneralExpense - monthVaultExpense;
+
+  return { income, expense, balance: income - expense, monthIncome, monthExpense, monthBalance, monthVaVrBalance, monthVaVrExpense, monthGeneralExpense };
 }
 
 // ── Stats e transações filtradas por mês ───────────────────────────────────
