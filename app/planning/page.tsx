@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getMonthData, getAccumulativeUpTo } from "@/lib/actions";
+import { getMonthData, getAccumulativeBalance } from "@/lib/actions";
 import { MonthDashboard } from "@/components/month-dashboard";
+import { AccumulativeCard } from "@/components/accumulative-card";
 
 export const metadata = { title: "Planejamento" };
 
@@ -12,9 +13,9 @@ export default async function PlanningPage() {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
-  const [initialData, initialAccumulative] = await Promise.all([
+  const [initialData, accumulative] = await Promise.all([
     getMonthData(year, month),
-    getAccumulativeUpTo(year, month),
+    getAccumulativeBalance(),
   ]);
 
   return (
@@ -27,11 +28,11 @@ export default async function PlanningPage() {
           Histórico de meses anteriores e previsão dos próximos.
         </p>
       </header>
+      <AccumulativeCard salary={accumulative.salary} vaVr={accumulative.vaVr} />
       <MonthDashboard
         initialData={initialData}
         initialYear={year}
         initialMonth={month}
-        initialAccumulative={initialAccumulative}
       />
     </div>
   );
