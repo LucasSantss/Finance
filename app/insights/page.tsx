@@ -1,6 +1,14 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getTransactions, getFixedSalary, getVaVr } from "@/lib/actions";
+import {
+  getTransactions,
+  getFixedSalary,
+  getVaVr,
+  processFixedSalaryForCurrentMonth,
+  processRecurringExpensesForCurrentMonth,
+  processVaultsForCurrentMonth,
+  processVaVrForCurrentMonth,
+} from "@/lib/actions";
 import { MonthlyChart } from "@/components/monthly-chart";
 import { CategoryPieChart } from "@/components/category-pie-chart";
 
@@ -9,6 +17,13 @@ export const metadata = { title: "Análises" };
 export default async function InsightsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
+
+  await Promise.all([
+    processFixedSalaryForCurrentMonth(),
+    processRecurringExpensesForCurrentMonth(),
+    processVaultsForCurrentMonth(),
+    processVaVrForCurrentMonth(),
+  ]);
 
   const [transactions, salary, vaVr] = await Promise.all([
     getTransactions(),

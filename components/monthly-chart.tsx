@@ -56,13 +56,11 @@ export function MonthlyChart({ transactions }: Props) {
 
       const v = Number(t.amount);
       const isVaVr = t.category === "VA/VR";
-      const isVault = t.source?.startsWith("vault_");
-
       if (isVaVr) {
         if (t.type === "INCOME") months[i].incomeVaVr += v;
         else months[i].expenseVaVr += v;
-      } else if (!isVault) {
-        // Exclui cofres do cálculo de saldo geral (igual ao getMonthData)
+      } else {
+        // Inclui tudo que não é VA/VR no Geral (incluindo Cofres)
         if (t.type === "INCOME") months[i].incomeGeral += v;
         else months[i].expenseGeral += v;
       }

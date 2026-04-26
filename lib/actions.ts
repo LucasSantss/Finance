@@ -126,9 +126,9 @@ export async function getTransactionStats() {
   const monthVaultExpense = thisMonthTransactions.filter(t => t.source?.startsWith("vault_") && t.type === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
 
   const monthSalaryIncome = monthIncome - monthVaVrIncome;
-  const monthGeneralExpense = monthExpense - monthVaVrExpense - monthVaultExpense;
+  const monthGeneralExpense = monthExpense - monthVaVrExpense;
   const monthVaVrBalance = monthVaVrIncome - monthVaVrExpense;
-  // monthGeneralExpense já exclui cofre; não subtrair novamente
+  // monthBalance = Salário - (Geral + Cofres)
   const monthBalance = monthSalaryIncome - monthGeneralExpense;
 
   return { income, expense, balance: income - expense, monthIncome, monthExpense, monthBalance, monthVaVrBalance, monthVaVrExpense, monthGeneralExpense };
