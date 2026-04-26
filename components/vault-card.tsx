@@ -1,8 +1,8 @@
 "use client";
 
 import { deleteVault, createVault } from "@/lib/actions";
-import { useState } from "react";
-import { PiggyBank, Trash2, Plus, X, Check } from "lucide-react";
+import { useState, useTransition } from "react";
+import { PiggyBank, Trash2, Plus, X, Check, Loader2 } from "lucide-react";
 
 type Vault = {
   id: string;
@@ -41,8 +41,17 @@ function calcVault(vault: Vault) {
 }
 
 export function VaultCard({ vault }: { vault: Vault }) {
+  const [isDeleting, startTransition] = useTransition();
   const { saved, total, progress, remaining } = calcVault(vault);
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  function handleDelete() {
+    if (!confirm(`Tem certeza que deseja excluir o cofre "${vault.name}"? As reservas deste mês serão estornadas.`)) return;
+    
+    startTransition(async () => {
+      await deleteVault(vault.id);
+    });
+  }
 
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-soft space-y-3">
@@ -59,10 +68,15 @@ export function VaultCard({ vault }: { vault: Vault }) {
           </div>
         </div>
         <button
-          onClick={() => deleteVault(vault.id)}
-          className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-red-500/10 hover:text-red-500 transition-colors"
+          onClick={handleDelete}
+          disabled={isDeleting}
+          className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-red-500/10 hover:text-red-500 transition-colors disabled:opacity-50"
         >
-          <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+          {isDeleting ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+          ) : (
+            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
         </button>
       </div>
 
