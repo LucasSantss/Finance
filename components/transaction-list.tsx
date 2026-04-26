@@ -1,4 +1,4 @@
-import { ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, PiggyBank } from "lucide-react";
 import { cn, formatBRL, formatDate } from "@/lib/utils";
 import { DeleteTransactionButton } from "@/components/delete-transaction-button";
 import type { Transaction } from "@prisma/client";
@@ -35,12 +35,16 @@ export function TransactionList({ transactions, limit }: TransactionListProps) {
                 "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
                 t.category === "VA/VR"
                   ? "bg-orange-500/10 text-orange-500"
-                  : isIncome
-                    ? "bg-success/10 text-success"
-                    : "bg-destructive/10 text-destructive"
+                  : t.category === "Cofre"
+                    ? "bg-violet-500/10 text-violet-500"
+                    : isIncome
+                      ? "bg-success/10 text-success"
+                      : "bg-destructive/10 text-destructive"
               )}
             >
-              {isIncome ? (
+              {t.category === "Cofre" ? (
+                <PiggyBank className="h-4 w-4" />
+              ) : isIncome ? (
                 <ArrowUpRight className="h-4 w-4" />
               ) : (
                 <ArrowDownLeft className="h-4 w-4" />
@@ -64,7 +68,7 @@ export function TransactionList({ transactions, limit }: TransactionListProps) {
             <div
               className={cn(
                 "shrink-0 text-sm font-semibold tabular-nums",
-                t.category === "VA/VR" ? "text-orange-500" : isIncome ? "text-success" : "text-foreground"
+                t.category === "VA/VR" ? "text-orange-500" : t.category === "Cofre" ? "text-violet-500" : isIncome ? "text-success" : "text-foreground"
               )}
             >
               {isIncome ? "+" : "−"} {formatBRL(Number(t.amount))}

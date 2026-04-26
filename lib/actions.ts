@@ -500,7 +500,22 @@ export async function processRecurringExpensesForCurrentMonth(): Promise<ActionR
 export async function getVaults() {
   const session = await getSession();
   if (!session) return [];
-  return prisma.vault.findMany({ where: { userId: session.user.id, active: true }, orderBy: { createdAt: "desc" } });
+  const vaults = await prisma.vault.findMany({
+    where: { userId: session.user.id, active: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const vaultsWithSaved = await Promise.all(
+    vaults.map(async (v) => {
+      const saved = await prisma.transaction.aggregate({
+        where: { userId: session.user.id, source: `vault_${v.id}`, type: "EXPENSE" },
+        _sum: { amount: true },
+      });
+      return { ...v, savedAmount: Number(saved._sum.amount ?? 0) };
+    })
+  );
+
+  return vaultsWithSaved;
 }
 
 export async function processVaultsForCurrentMonth(): Promise<ActionResult> {
@@ -583,7 +598,18 @@ export async function deleteVault(id: string): Promise<ActionResult> {
   if (!session) return { ok: false, error: "Não autenticado" };
 
   try {
-    await prisma.vault.deleteMany({ where: { id, userId: session.user.id } });
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+    // Deleta o cofre e também as transações dele do MÊS ATUAL
+    await prisma.$transaction([
+      prisma.transaction.deleteMany({
+        where: { userId: session.user.id, source: `vault_${id}`, date: { gte: startOfMonth, lte: endOfMonth } },
+      }),
+      prisma.vault.deleteMany({ where: { id, userId: session.user.id } }),
+    ]);
+
     revalidateAll();
     return { ok: true, data: undefined };
   } catch (err) {

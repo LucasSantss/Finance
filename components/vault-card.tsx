@@ -11,6 +11,7 @@ type Vault = {
   targetDate: Date;
   startDate: Date;
   active: boolean;
+  savedAmount?: number;
 };
 
 function calcVault(vault: Vault) {
@@ -18,18 +19,20 @@ function calcVault(vault: Vault) {
   const start = new Date(vault.startDate);
   const target = new Date(vault.targetDate);
 
+  // Total de meses incluindo o inicial e o final
   const totalMonths = Math.max(1,
     (target.getFullYear() - start.getFullYear()) * 12 +
-    (target.getMonth() - start.getMonth())
+    (target.getMonth() - start.getMonth()) + 1
   );
 
   const elapsedMonths = Math.max(0,
     (now.getFullYear() - start.getFullYear()) * 12 +
-    (now.getMonth() - start.getMonth())
+    (now.getMonth() - start.getMonth()) + 1
   );
 
   const monthly = Number(vault.monthlyAmount);
-  const saved = Math.min(elapsedMonths, totalMonths) * monthly;
+  // Se tivermos o valor real do banco, usamos ele. Caso contrário, usamos a estimativa.
+  const saved = vault.savedAmount !== undefined ? vault.savedAmount : Math.min(elapsedMonths, totalMonths) * monthly;
   const total = totalMonths * monthly;
   const progress = total > 0 ? Math.min(100, (saved / total) * 100) : 0;
   const remaining = Math.max(0, totalMonths - elapsedMonths);
