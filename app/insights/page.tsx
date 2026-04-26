@@ -4,6 +4,7 @@ import {
   getTransactions,
   getFixedSalary,
   getVaVr,
+  getMonthData,
   processFixedSalaryForCurrentMonth,
   processRecurringExpensesForCurrentMonth,
   processVaultsForCurrentMonth,
@@ -25,10 +26,15 @@ export default async function InsightsPage() {
     processVaVrForCurrentMonth(),
   ]);
 
-  const [transactions, salary, vaVr] = await Promise.all([
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const [transactions, salary, vaVr, monthData] = await Promise.all([
     getTransactions(),
     getFixedSalary(),
     getVaVr(),
+    getMonthData(year, month),
   ]);
 
   return (
@@ -51,10 +57,10 @@ export default async function InsightsPage() {
 
       <div className="rounded-xl border border-border bg-card p-5 shadow-soft">
         <h2 className="mb-4 text-sm font-semibold text-foreground">
-          Despesas por categoria (histórico)
+          Despesas por categoria (mês atual)
         </h2>
         <CategoryPieChart
-          transactions={transactions}
+          transactions={monthData.transactions}
           fixedSalary={salary ? Number(salary.amount) : 0}
           fixedVaVr={vaVr ? Number(vaVr.amount) : 0}
         />
