@@ -1,4 +1,5 @@
 {
   "buildCommand": "prisma generate && next build",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "bypassToken": "minha-chave-secreta-webhook-2025"
 }
