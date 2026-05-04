@@ -179,7 +179,7 @@ export function RecurringExpenseForm({ expenses }: { expenses: RecurringExpense[
                 <div key={e.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
                   <div>
                     <p className="text-sm font-medium text-foreground line-through">{e.description}</p>
-                    <p className="text-xs text-muted-foreground">{fmt(Number(e.amount))} · encerrou {fmtDate(e.endDate)}</p>
+                    <p className="text-xs text-muted-foreground">{fmt(Number(e.amount))} · encerrou {e.endDate ? fmtDate(e.endDate) : ""}</p>
                   </div>
                   <button onClick={() => handleDelete(e.id)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-red-500/10 hover:text-red-500 transition-colors">
                     <Trash2 className="h-3.5 w-3.5" />
