@@ -11,7 +11,7 @@ type RecurringExpense = {
   category: string;
   dayOfMonth: number;
   startDate: Date;
-  endDate: Date;
+  endDate: Date | null;
   active: boolean;
 };
 
@@ -20,6 +20,8 @@ const CATEGORIES = ["Moradia", "Transporte", "Alimentação", "Saúde", "Educaç
 export function RecurringExpenseForm({ expenses }: { expenses: RecurringExpense[] }) {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ description: "", amount: "", category: "Assinaturas", dayOfMonth: "1", startDate: "", endDate: "" });
+
+  const isSubscription = form.category === "Assinaturas";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -39,7 +41,7 @@ export function RecurringExpenseForm({ expenses }: { expenses: RecurringExpense[
       category: form.category,
       dayOfMonth: parseInt(form.dayOfMonth),
       startDate: form.startDate ? form.startDate + "-01" : "",
-      endDate: form.endDate ? form.endDate + "-28" : "",
+      endDate: isSubscription ? undefined : (form.endDate ? form.endDate + "-28" : undefined),
     });
     setLoading(false);
     if (result.ok) {
@@ -54,8 +56,8 @@ export function RecurringExpenseForm({ expenses }: { expenses: RecurringExpense[
     await deleteRecurringExpense(id);
   }
 
-  const active = expenses.filter((e) => new Date(e.endDate) >= new Date());
-  const ended = expenses.filter((e) => new Date(e.endDate) < new Date());
+  const active = expenses.filter((e) => !e.endDate || new Date(e.endDate) >= new Date());
+  const ended = expenses.filter((e) => e.endDate && new Date(e.endDate) < new Date());
 
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-soft space-y-4">
@@ -115,15 +117,24 @@ export function RecurringExpenseForm({ expenses }: { expenses: RecurringExpense[
                 onChange={(e) => setForm({ ...form, startDate: e.target.value })}
                 className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary [color-scheme:light] dark:[color-scheme:dark]" />
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Término</label>
-              <input
-                type="month"
-                lang="pt-BR"
-                value={form.endDate}
-                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary [color-scheme:light] dark:[color-scheme:dark]" />
-            </div>
+            {isSubscription ? (
+              <div className="space-y-1 flex flex-col justify-end">
+                <label className="text-xs text-muted-foreground">Término</label>
+                <div className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
+                  Contínua (sem fim)
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Término</label>
+                <input
+                  type="month"
+                  lang="pt-BR"
+                  value={form.endDate}
+                  onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary [color-scheme:light] dark:[color-scheme:dark]" />
+              </div>
+            )}
           </div>
           {error && <p className="text-xs text-red-500">{error}</p>}
           <div className="flex gap-2">
@@ -150,7 +161,7 @@ export function RecurringExpenseForm({ expenses }: { expenses: RecurringExpense[
             <div>
               <p className="text-sm font-medium text-foreground">{e.description}</p>
               <p className="text-xs text-muted-foreground">
-                {fmt(Number(e.amount))} · dia {e.dayOfMonth} · até {fmtDate(e.endDate)}
+                {fmt(Number(e.amount))} · dia {e.dayOfMonth} · {e.endDate ? `até ${fmtDate(e.endDate)}` : "Contínua"}
               </p>
             </div>
             <button onClick={() => handleDelete(e.id)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-red-500/10 hover:text-red-500 transition-colors">

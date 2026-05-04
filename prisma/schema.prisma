@@ -107,7 +107,7 @@ model RecurringExpense {
   category    String
   dayOfMonth  Int      @default(1)
   startDate   DateTime
-  endDate     DateTime
+  endDate     DateTime?
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

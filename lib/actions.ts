@@ -159,7 +159,12 @@ export async function getMonthData(year: number, month: number) {
       orderBy: { date: "desc" },
     }),
     prisma.recurringExpense.findMany({
-      where: { userId: session.user.id, active: true, startDate: { lte: endOfMonth }, endDate: { gte: startOfMonth } },
+      where: {
+        userId: session.user.id,
+        active: true,
+        startDate: { lte: endOfMonth },
+        OR: [{ endDate: null }, { endDate: { gte: startOfMonth } }],
+      },
     }),
     prisma.fixedSalary.findUnique({ where: { userId: session.user.id, active: true } }),
     prisma.vaVr.findUnique({ where: { userId: session.user.id, active: true } }),
@@ -431,16 +436,29 @@ export async function createRecurringExpense(data: {
   category: string;
   dayOfMonth: number;
   startDate: string;
-  endDate: string;
+  endDate?: string;
 }): Promise<ActionResult<{ id: string }>> {
   const session = await getSession();
   if (!session) return { ok: false, error: "Não autenticado" };
   if (data.amount <= 0) return { ok: false, error: "Valor inválido" };
   if (!data.description) return { ok: false, error: "Descrição obrigatória" };
 
+  // Assinaturas são contínuas — sem data de término
+  const isSubscription = data.category === "Assinaturas";
+  if (!isSubscription && !data.endDate) return { ok: false, error: "Data de término obrigatória" };
+
   try {
     const expense = await prisma.recurringExpense.create({
-      data: { id: crypto.randomUUID(), userId: session.user.id, description: data.description, amount: data.amount, category: data.category, dayOfMonth: data.dayOfMonth, startDate: new Date(data.startDate), endDate: new Date(data.endDate) },
+      data: {
+        id: crypto.randomUUID(),
+        userId: session.user.id,
+        description: data.description,
+        amount: data.amount,
+        category: data.category,
+        dayOfMonth: data.dayOfMonth,
+        startDate: new Date(data.startDate),
+        endDate: isSubscription ? null : new Date(data.endDate!),
+      },
       select: { id: true },
     });
     revalidateAll();
@@ -475,7 +493,12 @@ export async function processRecurringExpensesForCurrentMonth(): Promise<ActionR
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
     const expenses = await prisma.recurringExpense.findMany({
-      where: { userId: session.user.id, active: true, startDate: { lte: endOfMonth }, endDate: { gte: startOfMonth } },
+      where: {
+        userId: session.user.id,
+        active: true,
+        startDate: { lte: endOfMonth },
+        OR: [{ endDate: null }, { endDate: { gte: startOfMonth } }],
+      },
     });
 
     for (const expense of expenses) {
@@ -764,8 +787,8 @@ export async function getMonthlyCarryOver(year: number, month: number): Promise<
     }
     for (const exp of recurringExpenses) {
       const expStart = new Date(exp.startDate);
-      const expEnd = new Date(exp.endDate);
-      if (simStart <= expEnd && simEnd >= expStart && !launchedSources.has(`recurring_${exp.id}`)) {
+      const expEnd = exp.endDate ? new Date(exp.endDate) : null;
+      if (simStart <= (expEnd ?? new Date(9999, 0)) && simEnd >= expStart && !launchedSources.has(`recurring_${exp.id}`)) {
         salaryBal -= Number(exp.amount);
       }
     }
