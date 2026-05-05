@@ -10,7 +10,7 @@ export default async function TransactionsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const transactions = await getTransactions();
+  const transactions = await getTransactions(true);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -19,7 +19,7 @@ export default async function TransactionsPage() {
           Transações
         </h1>
         <p className="text-sm text-muted-foreground">
-          Histórico completo das suas movimentações.
+          Movimentações do mês atual.
         </p>
       </header>
 
