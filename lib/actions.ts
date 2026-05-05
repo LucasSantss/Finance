@@ -446,6 +446,10 @@ export async function createRecurringExpense(data: {
   // Assinaturas são contínuas — sem data de término
   const isSubscription = data.category === "Assinaturas";
   if (!isSubscription && !data.endDate) return { ok: false, error: "Data de término obrigatória" };
+  if (!data.startDate) return { ok: false, error: "Data de início obrigatória" };
+
+  const startDate = new Date(data.startDate);
+  if (isNaN(startDate.getTime())) return { ok: false, error: "Data de início inválida" };
 
   try {
     const expense = await prisma.recurringExpense.create({
@@ -456,7 +460,7 @@ export async function createRecurringExpense(data: {
         amount: data.amount,
         category: data.category,
         dayOfMonth: data.dayOfMonth,
-        startDate: new Date(data.startDate),
+        startDate: startDate,
         endDate: isSubscription ? null : new Date(data.endDate!),
       },
       select: { id: true },

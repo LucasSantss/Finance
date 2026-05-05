@@ -35,6 +35,11 @@ export function RecurringExpenseForm({ expenses }: { expenses: RecurringExpense[
   async function handleAdd() {
     setLoading(true);
     setError("");
+    if (!form.startDate) {
+      setError("Data de início obrigatória");
+      setLoading(false);
+      return;
+    }
     const result = await createRecurringExpense({
       description: form.description,
       amount: parseFloat(form.amount),
