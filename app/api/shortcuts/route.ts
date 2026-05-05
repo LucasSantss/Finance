@@ -24,11 +24,11 @@ export async function POST(req: NextRequest) {
     if (req.headers.get("x-webhook-secret") !== secret)
         return json({ error: "Não autorizado" }, 401);
 
-    let body: { userId?: string; text?: string };
+    let body: { userId?: string; text?: string; category?: string };
     try { body = await req.json(); }
     catch { return json({ error: "JSON inválido" }, 400); }
 
-    const { userId, text } = body;
+    const { userId, text, category } = body;
     if (!userId || !text?.trim()) return json({ error: "userId e text são obrigatórios" }, 400);
 
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
     const prompt = `Você é um parser de notificações bancárias brasileiras. Analise a notificação abaixo e extraia os dados da transação.
 
 Notificação: "${text}"
+${category ? `Categoria sugerida pelo usuário: "${category}". Use esta categoria se fizer sentido, mas sinta-se livre para classificá-la em outra se o texto da notificação indicar claramente que pertence a uma categoria diferente.` : ""}
 
 Responda APENAS com um JSON válido, sem markdown, sem explicação:
 {

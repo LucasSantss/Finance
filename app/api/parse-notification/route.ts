@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
-    const { text } = await req.json();
+    const { text, category } = await req.json();
     if (!text?.trim()) return NextResponse.json({ error: "Texto vazio" }, { status: 400 });
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
     const prompt = `Você é um parser de notificações bancárias brasileiras. Analise a notificação abaixo e extraia os dados da transação.
 
 Notificação: "${text}"
+${category ? `Categoria sugerida pelo usuário: "${category}". Use esta categoria se fizer sentido, mas sinta-se livre para classificá-la em outra se o texto da notificação indicar claramente que pertence a uma categoria diferente.` : ""}
 
 Responda APENAS com um JSON válido, sem markdown, sem explicação:
 {
