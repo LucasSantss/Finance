@@ -474,7 +474,37 @@ export async function deleteRecurringExpense(id: string): Promise<ActionResult> 
   if (!session) return { ok: false, error: "Não autenticado" };
 
   try {
-    await prisma.recurringExpense.deleteMany({ where: { id, userId: session.user.id } });
+    const expense = await prisma.recurringExpense.findFirst({
+      where: { id, userId: session.user.id },
+      select: { id: true, category: true },
+    });
+    if (!expense) return { ok: false, error: "Despesa não encontrada" };
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    if (expense.category === "Assinaturas") {
+      // Soft-delete: desativa e define endDate como início do mês atual
+      // A assinatura para de aparecer a partir deste mês em diante
+      await prisma.$transaction([
+        prisma.recurringExpense.update({
+          where: { id },
+          data: { active: false, endDate: startOfMonth, updatedAt: new Date() },
+        }),
+        // Remove a transação deste mês se já foi lançada
+        prisma.transaction.deleteMany({
+          where: {
+            userId: session.user.id,
+            source: `recurring_${id}`,
+            date: { gte: startOfMonth, lte: endOfMonth },
+          },
+        }),
+      ]);
+    } else {
+      await prisma.recurringExpense.deleteMany({ where: { id, userId: session.user.id } });
+    }
+
     revalidateAll();
     return { ok: true, data: undefined };
   } catch (err) {
