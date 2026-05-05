@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
-const EXPENSE_CATEGORIES = ["Moradia", "Alimentação", "Transporte", "Saúde", "Educação", "Lazer", "Assinaturas", "Compras", "Reserva", "Outros"];
-const INCOME_CATEGORIES = ["Salário", "Freelance", "Investimentos", "Renda Extra", "Outros"];
+const EXPENSE_CATEGORIES = ["Moradia", "Alimentação", "Transporte", "Saúde", "Educação", "Lazer", "Assinaturas", "Compras", "Reserva", "VA/VR", "Outros"];
+const INCOME_CATEGORIES = ["Salário", "Freelance", "Investimentos", "Renda Extra", "VA/VR", "Outros"];
 
 export async function POST(req: NextRequest) {
     const session = await auth();
