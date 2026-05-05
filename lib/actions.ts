@@ -451,25 +451,31 @@ export async function createRecurringExpense(data: {
   const startDate = new Date(data.startDate);
   if (isNaN(startDate.getTime())) return { ok: false, error: "Data de início inválida" };
 
+  let endDate: Date | null = null;
+  if (!isSubscription && data.endDate) {
+    endDate = new Date(data.endDate);
+    if (isNaN(endDate.getTime())) return { ok: false, error: "Data de término inválida" };
+  }
+
   try {
     const expense = await prisma.recurringExpense.create({
       data: {
-        id: crypto.randomUUID(),
         userId: session.user.id,
         description: data.description,
         amount: data.amount,
         category: data.category,
         dayOfMonth: data.dayOfMonth,
-        startDate: startDate,
-        endDate: isSubscription ? null : new Date(data.endDate!),
+        startDate,
+        endDate,
       },
       select: { id: true },
     });
     revalidateAll();
     return { ok: true, data: { id: expense.id } };
   } catch (err) {
-    console.error("[createRecurringExpense]", err);
-    return { ok: false, error: "Erro ao salvar despesa recorrente" };
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[createRecurringExpense]", message);
+    return { ok: false, error: message };
   }
 }
 
