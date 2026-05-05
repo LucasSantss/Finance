@@ -81,12 +81,8 @@ export async function getTransactions() {
   const session = await getSession();
   if (!session) return [];
 
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-
   return prisma.transaction.findMany({
-    where: { userId: session.user.id, date: { gte: startOfMonth, lte: endOfMonth } },
+    where: { userId: session.user.id },
     orderBy: { date: "desc" },
   });
 }

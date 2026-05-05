@@ -48,7 +48,7 @@ export function AppHeader({ user }: AppHeaderProps) {
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-border bg-background px-6 z-30 relative">
+      <header className="flex md:hidden h-16 items-center justify-between border-b border-border bg-background px-6 z-30 relative">
         {/* Mobile menu button */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}

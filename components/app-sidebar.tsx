@@ -5,9 +5,11 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Receipt, TrendingUp, Settings,
   Wallet, ChevronLeft, ChevronRight, CalendarDays, Repeat,
+  Sun, Moon, LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import { signOut } from "next-auth/react";
 
 const navItems = [
   { href: "/", label: "Visão geral", icon: LayoutDashboard },
@@ -26,10 +28,15 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
 
   useEffect(() => {
     const stored = localStorage.getItem("sidebar-collapsed");
     if (stored === "true") setCollapsed(true);
+    
+    const storedTheme = (localStorage.getItem("theme") as typeof theme) ?? "system";
+    setTheme(storedTheme);
+    
     setMounted(true);
   }, []);
 
@@ -39,14 +46,21 @@ export function AppSidebar({ user }: AppSidebarProps) {
     localStorage.setItem("sidebar-collapsed", String(next));
   }
 
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem("theme", next);
+    document.documentElement.classList.toggle("dark", next === "dark");
+  }
+
   // Evita flash de layout antes do hydration
   if (!mounted) return (
-    <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar" />
+    <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar h-screen sticky top-0" />
   );
 
   return (
     <aside className={cn(
-      "hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground relative",
+      "hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground relative h-screen sticky top-0",
       "transition-[width] duration-200 ease-in-out will-change-[width]",
       collapsed ? "w-[68px]" : "w-64"
     )}>
@@ -78,7 +92,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
       </button>
 
       {/* Nav */}
-      <nav className="flex-1 px-2 py-4 overflow-hidden">
+      <nav className="flex-1 px-2 py-4 overflow-y-auto overflow-x-hidden">
         <ul className="space-y-0.5">
           {navItems.map((item) => {
             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
@@ -109,6 +123,33 @@ export function AppSidebar({ user }: AppSidebarProps) {
           })}
         </ul>
       </nav>
+
+      {/* Actions (Theme & Logout) */}
+      <div className={cn(
+        "flex shrink-0 p-3",
+        collapsed ? "flex-col items-center gap-2 border-t border-sidebar-border" : "items-center justify-between border-t border-sidebar-border px-6"
+      )}>
+        <button
+          onClick={toggleTheme}
+          title={collapsed ? "Alternar tema" : undefined}
+          className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+          aria-label="Alternar tema"
+        >
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          title={collapsed ? "Sair" : undefined}
+          className={cn(
+            "flex h-9 items-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors",
+            collapsed ? "w-9 justify-center" : "gap-2 px-3 text-sm"
+          )}
+          aria-label="Sair"
+        >
+          <LogOut className="h-4 w-4" />
+          {!collapsed && <span>Sair</span>}
+        </button>
+      </div>
 
       {/* Footer */}
       <div className={cn(
